@@ -105,6 +105,36 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
     renderSearch(res, db, config, q);
   });
 
+  app.get('/t/:id', (req, res) => {
+    const testimonial = findTestimonialById(db, req.params.id);
+    if (!testimonial) {
+      res.status(404).render('pages/not-found', viewLocals(config, {
+        title: 'Testimoni tidak ditemukan',
+        description: 'Testimoni tidak ditemukan.',
+        username: 'unknown'
+      }));
+      return;
+    }
+
+    const viewResult = maybeRecordDetailView(db, req, testimonial.id);
+    const detailItem = viewResult?.testimonial || testimonial;
+    if (viewResult.counted && typeof options.onDatabaseChange === 'function') {
+      options.onDatabaseChange({ reason: 'testimonial_view', testimonialId: testimonial.id });
+    }
+
+    const profile = getPublicTestimonialsByUsername(db, testimonial.username);
+    const member = profile?.member || null;
+    const related = (profile?.testimonials || []).filter((item) => item.id !== detailItem.id).slice(0, 6);
+
+    res.render('pages/testimonial-detail', viewLocals(config, {
+      title: `#${(detailItem.keywords || [detailItem.username])[0] || detailItem.username} — @${detailItem.username}`,
+      description: detailItem.text || `Testimoni dari @${detailItem.username}`,
+      testimonial: detailItem,
+      member,
+      related
+    }));
+  });
+
   app.get('/media/:id', async (req, res) => {
     const testimonial = findTestimonialById(db, req.params.id);
     if (!testimonial) {
@@ -114,10 +144,6 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
 
     try {
       const media = await readStoredMedia(testimonial, config, { rangeHeader: req.headers.range });
-      const viewResult = maybeRecordMediaView(db, req, testimonial.id);
-      if (viewResult.counted && typeof options.onDatabaseChange === 'function') {
-        options.onDatabaseChange({ reason: 'testimonial_view', testimonialId: testimonial.id });
-      }
 
       res.status(media.statusCode || 200);
       res.setHeader('Content-Type', media.contentType || 'application/octet-stream');
@@ -224,6 +250,7 @@ function viewLocals(config, locals = {}) {
     webTitle: config.webTitle,
     mediaDisplayUrl,
     mediaKindLabel,
+    testimonialUrl,
     viewCountOf,
     ...locals
   };
@@ -236,6 +263,11 @@ function mediaDisplayUrl(item = {}) {
 
 function mediaKindLabel(item = {}) {
   return item.mediaType === 'video' ? 'Video' : 'Gambar';
+}
+
+function testimonialUrl(item = {}) {
+  if (!item?.id) return '#';
+  return `/t/${encodeURIComponent(item.id)}`;
 }
 
 function viewCountOf(item = {}) {
@@ -261,7 +293,7 @@ function buildProfileStats(testimonials = []) {
   };
 }
 
-function maybeRecordMediaView(db, req, testimonialId) {
+function maybeRecordDetailView(db, req, testimonialId) {
   if (req.method === 'HEAD' || isLikelyBot(req.headers['user-agent'])) {
     return { counted: false };
   }

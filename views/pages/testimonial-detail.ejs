@@ -1,0 +1,89 @@
+<%- include('../partials/head') %>
+<%- include('../partials/topbar') %>
+
+<main class="container">
+  <section class="detail-layout">
+    <article class="detail-main panel">
+      <div class="detail-media-frame no-save" oncontextmenu="return false">
+        <div class="detail-media">
+          <% if (testimonial.mediaType === 'video') { %>
+            <video
+              src="<%= mediaDisplayUrl(testimonial) %>"
+              controls
+              controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+              disablePictureInPicture
+              playsinline
+              preload="metadata"
+              oncontextmenu="return false"
+            ></video>
+          <% } else { %>
+            <img
+              src="<%= mediaDisplayUrl(testimonial) %>"
+              alt="Testimoni dari @<%= testimonial.username %>"
+              loading="eager"
+              draggable="false"
+              oncontextmenu="return false"
+            >
+          <% } %>
+
+          <div class="watermark-layer" aria-hidden="true">
+            <% const wmText = `@${testimonial.username} • #${(testimonial.keywords || ['testimoni'])[0] || 'testimoni'} • ${config.webTitle}`; %>
+            <% for (let i = 0; i < 12; i++) { %>
+              <span><%= wmText %></span>
+            <% } %>
+          </div>
+
+          <div class="detail-badges">
+            <span><%= mediaKindLabel(testimonial) %></span>
+            <span><%= formatNumber(viewCountOf(testimonial)) %> dilihat</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside class="detail-sidebar panel">
+      <div class="detail-author">
+        <div class="avatar"><%= ((member?.name || testimonial.memberName || testimonial.username) || 'M').charAt(0).toUpperCase() %></div>
+        <div>
+          <p class="eyebrow">Testimoni Member</p>
+          <h1 class="detail-title"><%= member?.name || testimonial.memberName || testimonial.username %></h1>
+          <p class="username">@<%= testimonial.username %></p>
+        </div>
+      </div>
+
+      <div class="detail-meta">
+        <a class="detail-hashtag" href="/search?q=<%= encodeURIComponent((testimonial.keywords || [''])[0] || '') %>">#<%= (testimonial.keywords || [''])[0] || 'testimoni' %></a>
+        <time><%= formatDateTime(testimonial.createdAt, config.timezone) %></time>
+      </div>
+
+      <div class="detail-caption">
+        <p><%= testimonial.text %></p>
+      </div>
+
+      <div class="detail-stat-grid">
+        <div><span>Dilihat</span><strong><%= formatNumber(viewCountOf(testimonial)) %></strong></div>
+        <div><span>Tipe</span><strong><%= mediaKindLabel(testimonial) %></strong></div>
+        <div><span>Profil</span><strong>@<%= testimonial.username %></strong></div>
+      </div>
+
+      <div class="detail-actions">
+        <a class="primary-btn" href="/@<%= testimonial.username %>">Lihat Profil</a>
+        <a class="secondary-btn" href="/search?q=<%= encodeURIComponent((testimonial.keywords || [''])[0] || '') %>">Cari Hashtag</a>
+      </div>
+
+      <p class="muted small-note">Watermark visual ditampilkan di halaman detail untuk mengurangi penyalahgunaan media. Proteksi ini membantu untuk pengguna umum, tetapi seperti semua media web, tidak bisa 100% anti-download untuk pengguna teknis.</p>
+    </aside>
+  </section>
+
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Lainnya dari @<%= testimonial.username %></p>
+      <h2>Testimoni terkait</h2>
+    </div>
+    <a class="text-link" href="/@<%= testimonial.username %>">Buka profil</a>
+  </section>
+
+  <%- include('../partials/testimonial-grid', { testimonials: related, config }) %>
+</main>
+
+<%- include('../partials/footer') %>

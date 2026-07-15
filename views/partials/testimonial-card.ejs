@@ -1,6 +1,6 @@
 <article class="testimonial-card">
   <div class="media-shell no-save" oncontextmenu="return false">
-    <a class="media" href="/@<%= item.username %>" aria-label="Buka profil @<%= item.username %>">
+    <a class="media" href="<%= testimonialUrl(item) %>" aria-label="Buka detail testimoni dari @<%= item.username %>">
       <% if (item.mediaType === 'video') { %>
         <video
           src="<%= mediaDisplayUrl(item) %>"
@@ -32,6 +32,7 @@
       <time><%= formatDateTime(item.createdAt, config.timezone) %></time>
     </div>
     <p><%= item.text %></p>
+    <a class="open-post-link" href="<%= testimonialUrl(item) %>">Buka detail →</a>
     <div class="keywords">
       <% (item.keywords || []).slice(0, 1).forEach((key) => { %>
         <a href="/search?q=<%= encodeURIComponent(key) %>">#<%= key %></a>

@@ -366,3 +366,9 @@ Proteksi download yang diterapkan:
 
 Catatan penting: di web, media tidak bisa dibuat 100% anti-download. Kalau file bisa dilihat di browser, orang teknis masih bisa mengambilnya melalui devtools, cache, screenshot, atau screen recording. Proteksi ini bertujuan mengurangi download mudah untuk pengguna umum.
 
+
+
+## Update terbaru
+- Halaman detail testimoni ala Instagram di `/t/:id`
+- View counter dihitung dari klik halaman detail, bukan dari load file media
+- Watermark visual di halaman detail untuk gambar dan video
