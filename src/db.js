@@ -7,6 +7,7 @@ import {
   normalizeSearchText,
   readJson,
   slugifyUsername,
+  toJid,
   writeJson
 } from './utils.js';
 
@@ -38,16 +39,70 @@ export function normalizeDb(db = {}) {
   if (!db.searchStats || typeof db.searchStats !== 'object' || Array.isArray(db.searchStats)) db.searchStats = {};
   normalizeSearchStats(db.searchStats);
 
-  // Perbaiki index username jika database lama belum punya usernameIndex.
-  for (const [jid, member] of Object.entries(db.members)) {
-    normalizeMember(member, jid);
-    if (member.account?.username) {
-      db.usernameIndex[member.account.username] = jid;
+  // Perbaiki index username + canonical JID jika database lama menyimpan nomor
+  // dalam format berbeda (628xxx, 628xxx@s.whatsapp.net, atau ada spasi/simbol).
+  const normalizedMembers = {};
+  const normalizedUsernameIndex = {};
+  for (const [rawJid, member] of Object.entries(db.members)) {
+    const canonicalJid = canonicalMemberJid(member?.jid || rawJid);
+    normalizeMember(member, canonicalJid);
+
+    const existing = normalizedMembers[canonicalJid];
+    normalizedMembers[canonicalJid] = mergeMemberRecords(existing, member);
+
+    if (normalizedMembers[canonicalJid].account?.username) {
+      normalizedUsernameIndex[normalizedMembers[canonicalJid].account.username] = canonicalJid;
     }
   }
 
-  db.testimonials = db.testimonials.map((item) => normalizeTestimonial(item)).filter(Boolean);
+  db.members = normalizedMembers;
+  db.usernameIndex = normalizedUsernameIndex;
+
+  db.testimonials = db.testimonials
+    .map((item) => normalizeTestimonial({ ...item, jid: canonicalMemberJid(item?.jid || '') }))
+    .filter(Boolean);
   return db;
+}
+
+
+function canonicalMemberJid(value = '') {
+  const jid = toJid(value);
+  return jid || String(value || '').trim();
+}
+
+function mergeMemberRecords(current, incoming) {
+  if (!current) return incoming;
+
+  const currentScore = memberRecordScore(current);
+  const incomingScore = memberRecordScore(incoming);
+  const primary = incomingScore >= currentScore ? incoming : current;
+  const secondary = primary === incoming ? current : incoming;
+
+  return normalizeMember({
+    ...secondary,
+    ...primary,
+    account: primary.account || secondary.account || null,
+    profile: { ...(secondary.profile || {}), ...(primary.profile || {}) },
+    daily: { ...(secondary.daily || {}), ...(primary.daily || {}) },
+    registered: Boolean(primary.registered || secondary.registered),
+    points: Math.max(Number(primary.points || 0), Number(secondary.points || 0)),
+    xp: Math.max(Number(primary.xp || 0), Number(secondary.xp || 0)),
+    totalXp: Math.max(Number(primary.totalXp || 0), Number(secondary.totalXp || 0)),
+    level: Math.max(Number(primary.level || 1), Number(secondary.level || 1)),
+    testimonialCount: Math.max(Number(primary.testimonialCount || 0), Number(secondary.testimonialCount || 0)),
+    messageCount: Math.max(Number(primary.messageCount || 0), Number(secondary.messageCount || 0)),
+    updatedAt: Math.max(Number(primary.updatedAt || 0), Number(secondary.updatedAt || 0), Date.now())
+  }, primary.jid || secondary.jid);
+}
+
+function memberRecordScore(member = {}) {
+  let score = 0;
+  if (member.account?.username) score += 100;
+  if (member.registered) score += 25;
+  score += Math.min(20, Number(member.testimonialCount || 0));
+  score += Math.min(20, Number(member.points || 0) / 100);
+  score += Math.min(10, Number(member.updatedAt || 0) / 10_000_000_000_000);
+  return score;
 }
 
 export function createMember(jid, name = 'Member') {
@@ -205,6 +260,7 @@ function normalizeTestimonial(item = {}) {
 
 export function getMember(db, jid, name = 'Member') {
   normalizeDb(db);
+  jid = canonicalMemberJid(jid);
   if (!db.members[jid]) db.members[jid] = createMember(jid, name);
   normalizeMember(db.members[jid], jid);
   if (name && (!db.members[jid].name || db.members[jid].name === 'Member')) {
@@ -215,6 +271,7 @@ export function getMember(db, jid, name = 'Member') {
 }
 
 export function registerMember(db, jid, name) {
+  jid = canonicalMemberJid(jid);
   const member = getMember(db, jid, name);
   member.name = name || member.name || 'Member';
   if (!member.registered) {
@@ -226,6 +283,7 @@ export function registerMember(db, jid, name) {
 }
 
 export function createOrUpdateAccount(db, jid, name, usernameInput, password) {
+  jid = canonicalMemberJid(jid);
   normalizeDb(db);
   const username = slugifyUsername(usernameInput);
   const member = registerMember(db, jid, name || 'Member');

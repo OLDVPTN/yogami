@@ -477,3 +477,20 @@ Contoh:
 - Section `Testimoni Terbaru` tetap menampilkan postingan terbaru dari member.
 - Tombol `Lihat semua` pada Testimoni Terbaru mengarah ke `/latest`, bukan `/search`.
 - `/latest` menampilkan timeline testimoni terbaru berdasarkan waktu posting.
+
+
+## Patch akun member kedua
+Jika user kedua sudah muncul di Neon tetapi bot masih meminta daftar, penyebabnya biasanya runtime Render masih memakai cache memory lama. Versi ini memperbaiki itu dengan:
+
+- refresh database dari Neon sebelum memproses webhook WhatsApp, selama tidak ada perubahan lokal yang belum tersimpan;
+- save Neon dibuat immediate secara default (`DB_SAVE_IMMEDIATE=true`);
+- JID/nomor member dinormalisasi ke format canonical `628xxx@s.whatsapp.net` agar akun tidak terpecah karena beda format nomor.
+
+Saran env production:
+
+```env
+DB_PROVIDER=neon
+DB_SAVE_IMMEDIATE=true
+DB_LIVE_READS=true
+DB_LIVE_READ_MIN_MS=1000
+```

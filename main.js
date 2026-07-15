@@ -52,9 +52,20 @@ let lastSave = Date.now();
 let databaseDirty = false;
 
 async function saveNow(options = {}) {
-  await saveDatabase(config, db, DB_FILE, options);
-  databaseDirty = false;
+  const immediate = shouldSaveImmediately(options);
+  const result = await saveDatabase(config, db, DB_FILE, { ...options, immediate });
+  if (!result?.scheduled) {
+    databaseDirty = false;
+  }
   lastSave = Date.now();
+  return result;
+}
+
+function shouldSaveImmediately(options = {}) {
+  if (options.immediate) return true;
+  if (config.database.provider !== 'neon') return false;
+  const raw = String(process.env.DB_SAVE_IMMEDIATE ?? 'true').trim().toLowerCase();
+  return raw !== 'false';
 }
 
 async function reloadDatabaseFromSource() {
@@ -98,11 +109,19 @@ async function processWebhookPayload(payload) {
 
   for (const event of messages) {
     try {
+      // Ambil snapshot terbaru dari Neon sebelum memproses pesan. Ini mencegah
+      // kasus user sudah ada di database, tetapi runtime Render masih memakai
+      // cache memory lama. Jika ada perubahan lokal yang belum tersimpan,
+      // reloadDatabaseFromSource() otomatis skip.
+      await reloadDatabaseFromSource().catch((error) => {
+        console.error(chalk.yellow('[database refresh before webhook]'), error.message);
+      });
+
       const changed = await handleIncoming(waClient, event, db, config);
       results.push({ id: event.id, from: event.from, changed });
       if (changed) databaseDirty = true;
       if (changed || Date.now() - lastSave > 10_000) {
-        saveNow({ immediate: Boolean(process.env.DB_SAVE_IMMEDIATE === 'true') })
+        await saveNow({ immediate: Boolean(process.env.DB_SAVE_IMMEDIATE === 'true') })
           .catch((error) => console.error(chalk.red('[database save error]'), error.message));
       }
     } catch (error) {
