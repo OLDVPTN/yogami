@@ -12,8 +12,10 @@ import {
   findTestimonialById,
   getPublicTestimonialsByUsername,
   latestTestimonials,
+  recordSearchQuery,
   recordTestimonialView,
-  searchTestimonials
+  searchTestimonials,
+  topSearchKeywordToday
 } from './db.js';
 import { readStoredMedia } from './storage.js';
 
@@ -33,6 +35,7 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
   app.locals.formatNumber = formatNumber;
   app.locals.formatDateTime = formatDateTime;
   app.locals.encodeURIComponent = encodeURIComponent;
+  app.locals.onDatabaseChange = typeof options.onDatabaseChange === 'function' ? options.onDatabaseChange : null;
 
   app.use(express.urlencoded({ extended: false }));
   app.use(express.json({
@@ -120,14 +123,16 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
     const q = String(req.query.q || '').trim();
     if (q) return renderSearch(res, db, config, q);
 
-    const latest = latestTestimonials(db, 12);
+    const latest = latestTestimonials(db, 24);
     const stats = buildPublicStats(db);
+    const trendingKeyword = buildHeroKeyword(db, config, latest);
     res.render('pages/home', viewLocals(config, {
       title: config.webTitle,
       description: 'Cari testimoni member berdasarkan keyword, lalu buka profil pengguna untuk melihat semua testimoni mereka.',
       query: q,
       latest,
-      stats
+      stats,
+      trendingKeyword
     }));
   });
 
@@ -234,7 +239,8 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
       totalTestimonials: item.totalTestimonials,
       matchedTestimonials: item.matchedTestimonials,
       profileUrl: `/@${item.username}`,
-      latestAt: item.latestAt
+      latestAt: item.latestAt,
+      verified: Boolean(item.verified)
     }));
     res.json({ query: q, results });
   });
@@ -291,8 +297,15 @@ function shouldRefreshBeforeRequest(req) {
 }
 
 function renderSearch(res, db, config, q) {
-  const results = searchTestimonials(db, q, 40);
   const normalized = normalizeSearchText(q);
+  if (normalized) {
+    const searchRecord = recordSearchQuery(db, q, config);
+    if (searchRecord.ok && typeof res.req?.app?.locals?.onDatabaseChange === 'function') {
+      res.req.app.locals.onDatabaseChange({ reason: 'search_query', query: q, keyword: searchRecord.keyword });
+    }
+  }
+
+  const results = searchTestimonials(db, q, 40);
 
   res.render('pages/search', viewLocals(config, {
     title: q ? `Cari: ${q}` : 'Cari Testimoni',
@@ -332,6 +345,27 @@ function testimonialUrl(item = {}) {
 
 function viewCountOf(item = {}) {
   return Math.max(0, Number(item.views?.count || item.viewCount || 0));
+}
+
+
+function buildHeroKeyword(db = {}, config = {}, latest = []) {
+  const top = topSearchKeywordToday(db, config);
+  if (top) {
+    return {
+      label: top.label || top.keyword,
+      keyword: top.keyword,
+      count: Number(top.count || 0),
+      source: 'today-search'
+    };
+  }
+
+  const fallback = latest.find((item) => Array.isArray(item.keywords) && item.keywords[0])?.keywords?.[0];
+  return {
+    label: fallback || 'thalasemia',
+    keyword: fallback || 'thalasemia',
+    count: 0,
+    source: fallback ? 'latest-testimonial' : 'default'
+  };
 }
 
 function buildPublicStats(db = {}) {

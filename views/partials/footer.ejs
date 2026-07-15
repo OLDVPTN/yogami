@@ -8,6 +8,17 @@
   document.addEventListener('dragstart', function (event) {
     if (event.target.closest && event.target.closest('.no-save')) event.preventDefault();
   });
+
+  document.querySelectorAll('[data-load-more="home-testimonials"]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var step = Number(button.getAttribute('data-step') || 4);
+      var hidden = Array.from(document.querySelectorAll('.home-testimonial-grid .testimonial-card.home-hidden'));
+      hidden.slice(0, step).forEach(function (card) { card.classList.remove('home-hidden'); });
+      if (document.querySelectorAll('.home-testimonial-grid .testimonial-card.home-hidden').length === 0) {
+        button.closest('.load-more-wrap').remove();
+      }
+    });
+  });
 </script>
 </body>
 </html>

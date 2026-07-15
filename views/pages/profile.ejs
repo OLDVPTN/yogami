@@ -6,8 +6,8 @@
     <div class="avatar"><%= (member.name || member.account.username).charAt(0).toUpperCase() %></div>
     <div class="profile-info">
       <p class="eyebrow">Profil Member</p>
-      <h1><%= member.name || member.account.username %></h1>
-      <p class="username">@<%= member.account.username %></p>
+      <h1><%= member.name || member.account.username %><% if (member.profile?.verified) { %><span class="verified-badge large" title="Akun terverifikasi">✓</span><% } %></h1>
+      <p class="username">@<%= member.account.username %><% if (member.profile?.verified) { %> <span class="verified-text">Terverifikasi</span><% } %></p>
       <div class="stats">
         <span><%= formatNumber(testimonials.length) %> testimoni</span>
         <span><%= formatNumber(profileStats?.views || 0) %> dilihat</span>

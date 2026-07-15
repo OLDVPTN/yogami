@@ -4,9 +4,14 @@
     <p>Testimoni yang dikirim lewat WhatsApp akan muncul di sini.</p>
   </section>
 <% } else { %>
-  <section class="cards testimonials">
-    <% testimonials.forEach((item) => { %>
-      <%- include('testimonial-card', { item, config }) %>
+  <section class="cards testimonials <%= typeof homeLimit !== 'undefined' ? 'home-testimonial-grid' : '' %>">
+    <% testimonials.forEach((item, index) => { %>
+      <%- include('testimonial-card', { item, config, cardClass: (typeof homeLimit !== 'undefined' && index >= homeLimit) ? 'home-hidden' : '' }) %>
     <% }) %>
   </section>
+  <% if (typeof homeLimit !== 'undefined' && testimonials.length > homeLimit) { %>
+    <div class="load-more-wrap">
+      <button class="load-more-btn" type="button" data-load-more="home-testimonials" data-step="4">Load more</button>
+    </div>
+  <% } %>
 <% } %>

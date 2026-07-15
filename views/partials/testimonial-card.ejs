@@ -1,4 +1,4 @@
-<article class="testimonial-card">
+<article class="testimonial-card <%= typeof cardClass !== 'undefined' ? cardClass : '' %>">
   <div class="media-shell no-save" oncontextmenu="return false">
     <a class="media" href="<%= testimonialUrl(item) %>" aria-label="Buka detail testimoni dari @<%= item.username %>">
       <% if (item.mediaType === 'video') { %>
@@ -22,13 +22,13 @@
       <% } %>
     </a>
     <div class="media-badges">
-      <span><%= item.mediaType === 'video' ? '▶ Video' : '● Gambar' %></span>
+      <span><%= item.verified ? '✓ Terverifikasi' : (item.mediaType === 'video' ? '▶ Video' : '● Gambar') %></span>
       <span><%= formatNumber(viewCountOf(item)) %> dilihat</span>
     </div>
   </div>
   <div class="content">
     <div class="card-topline">
-      <a class="author" href="/@<%= item.username %>">@<%= item.username %></a>
+      <a class="author" href="/@<%= item.username %>">@<%= item.username %><% if (item.verified) { %><span class="verified-badge" title="Testimoni terverifikasi">✓</span><% } %></a>
       <time><%= formatDateTime(item.createdAt, config.timezone) %></time>
     </div>
     <p><%= item.text %></p>

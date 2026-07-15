@@ -34,5 +34,6 @@
     "provider": "local",
     "stateKey": "main",
     "saveDebounceMs": 1500
-  }
+  },
+  "verifierNumbers": []
 }

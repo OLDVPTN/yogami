@@ -16,9 +16,15 @@
     </div>
     <div class="hero-card" aria-hidden="true">
       <div class="hero-orb"></div>
-      <p>Search by keyword</p>
-      <strong>#thalasemia</strong>
-      <span>Gambar · Video · Profil Member</span>
+      <p><%= trendingKeyword?.source === 'today-search' ? 'Paling dicari hari ini' : 'Keyword yang bisa dicari' %></p>
+      <strong>#<%= trendingKeyword?.label || 'thalasemia' %></strong>
+      <span>
+        <% if (trendingKeyword?.source === 'today-search') { %>
+          <%= formatNumber(trendingKeyword.count || 0) %>x dicari hari ini
+        <% } else { %>
+          Gambar · Video · Profil Member
+        <% } %>
+      </span>
     </div>
   </section>
 
@@ -30,7 +36,7 @@
     <a class="text-link" href="/search">Lihat semua</a>
   </section>
 
-  <%- include('../partials/testimonial-grid', { testimonials: latest, config }) %>
+  <%- include('../partials/testimonial-grid', { testimonials: latest, config, homeLimit: 4 }) %>
 </main>
 
 <%- include('../partials/footer') %>

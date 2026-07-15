@@ -11,8 +11,8 @@
         <div class="user-main">
           <div class="user-line">
             <div>
-              <h2><%= item.name %></h2>
-              <p>@<%= item.username %></p>
+              <h2><%= item.name %><% if (item.verified) { %><span class="verified-badge" title="Akun terverifikasi">✓</span><% } %></h2>
+              <p>@<%= item.username %><% if (item.verified) { %> <span class="verified-text">Terverifikasi</span><% } %></p>
             </div>
             <span class="arrow">↗</span>
           </div>

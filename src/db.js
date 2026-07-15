@@ -15,7 +15,8 @@ const DEFAULT_DB = {
   usernameIndex: {},
   testimonials: [],
   vouchers: {},
-  redemptions: []
+  redemptions: [],
+  searchStats: {}
 };
 
 export function loadDb(file = './database/database.json') {
@@ -34,6 +35,8 @@ export function normalizeDb(db = {}) {
   if (!Array.isArray(db.testimonials)) db.testimonials = [];
   if (!db.vouchers || typeof db.vouchers !== 'object') db.vouchers = {};
   if (!Array.isArray(db.redemptions)) db.redemptions = [];
+  if (!db.searchStats || typeof db.searchStats !== 'object' || Array.isArray(db.searchStats)) db.searchStats = {};
+  normalizeSearchStats(db.searchStats);
 
   // Perbaiki index username jika database lama belum punya usernameIndex.
   for (const [jid, member] of Object.entries(db.members)) {
@@ -91,6 +94,8 @@ function normalizeMember(member, jid = '') {
   member.profile.bio = member.profile.bio || '';
   member.profile.avatar = member.profile.avatar || '';
   member.profile.published = member.profile.published !== false;
+  member.profile.verified = Boolean(member.profile.verified);
+  member.profile.verifiedAt = member.profile.verifiedAt || null;
   member.level = Number(member.level || 1);
   member.xp = Number(member.xp || 0);
   member.totalXp = Number(member.totalXp || 0);
@@ -121,6 +126,55 @@ function normalizeTestimonialViews(views = {}, legacyCount = 0) {
   };
 }
 
+
+function normalizeSearchStats(searchStats = {}) {
+  for (const [day, entries] of Object.entries(searchStats)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !entries || typeof entries !== 'object' || Array.isArray(entries)) {
+      delete searchStats[day];
+      continue;
+    }
+
+    for (const [key, item] of Object.entries(entries)) {
+      if (!item || typeof item !== 'object') {
+        delete entries[key];
+        continue;
+      }
+      const normalizedKey = normalizeKeywordKey(item.keyword || item.query || key);
+      if (!normalizedKey) {
+        delete entries[key];
+        continue;
+      }
+      if (normalizedKey !== key) {
+        entries[normalizedKey] = item;
+        delete entries[key];
+      }
+      entries[normalizedKey] = {
+        keyword: normalizedKey,
+        label: cleanSearchLabel(item.label || item.query || normalizedKey),
+        count: Math.max(0, Number(item.count || 0)),
+        firstSearchedAt: Number(item.firstSearchedAt || item.createdAt || Date.now()),
+        lastSearchedAt: Number(item.lastSearchedAt || item.updatedAt || Date.now())
+      };
+    }
+  }
+  return searchStats;
+}
+
+function normalizeKeywordKey(value = '') {
+  return normalizeSearchText(value)
+    .replace(/^#+/, '')
+    .split(' ')
+    .filter(Boolean)
+    .filter((word) => !['testimoni', 'testimonial', 'pengalaman', 'cari', 'search'].includes(word))
+    .join(' ')
+    .slice(0, 80);
+}
+
+function cleanSearchLabel(value = '') {
+  const key = normalizeKeywordKey(value);
+  return key || '';
+}
+
 function normalizeTestimonial(item = {}) {
   if (!item || typeof item !== 'object') return null;
   if (!item.id || !item.jid || !item.username || !item.mediaUrl) return null;
@@ -139,6 +193,9 @@ function normalizeTestimonial(item = {}) {
     sizeBytes: Number(item.sizeBytes || 0),
     watermarked: Boolean(item.watermarked),
     watermarkMode: item.watermarkMode || '',
+    verified: Boolean(item.verified),
+    verifiedBy: item.verifiedBy || '',
+    verifiedAt: item.verifiedAt || null,
     views: normalizeTestimonialViews(item.views, item.viewCount),
     published: item.published !== false,
     createdAt: item.createdAt || Date.now(),
@@ -248,6 +305,9 @@ export function addTestimonial(db, member, payload = {}) {
     sizeBytes: payload.sizeBytes || 0,
     watermarked: Boolean(payload.watermarked),
     watermarkMode: payload.watermarkMode || '',
+    verified: Boolean(payload.verified),
+    verifiedBy: payload.verifiedBy || '',
+    verifiedAt: payload.verifiedAt || null,
     published: true,
     createdAt: Date.now(),
     updatedAt: Date.now()
@@ -265,6 +325,41 @@ export function findTestimonialById(db, id) {
   const normalizedId = String(id || '').trim();
   if (!normalizedId) return null;
   return db.testimonials.find((item) => item.id === normalizedId && item.published !== false) || null;
+}
+
+
+export function setTestimonialVerified(db, id, verifierJid = '', verified = true) {
+  normalizeDb(db);
+  const testimonial = db.testimonials.find((item) => item.id === String(id || '').trim() && item.published !== false);
+  if (!testimonial) return { ok: false, reason: 'not_found' };
+
+  const now = Date.now();
+  testimonial.verified = Boolean(verified);
+  testimonial.verifiedBy = verified ? verifierJid : '';
+  testimonial.verifiedAt = verified ? now : null;
+  testimonial.updatedAt = now;
+
+  const member = db.members[testimonial.jid];
+  if (member) {
+    normalizeMember(member, testimonial.jid);
+    const hasVerified = db.testimonials.some((item) => item.jid === testimonial.jid && item.published !== false && item.verified);
+    member.profile.verified = hasVerified;
+    member.profile.verifiedAt = hasVerified
+      ? Math.max(...db.testimonials
+        .filter((item) => item.jid === testimonial.jid && item.published !== false && item.verified)
+        .map((item) => Number(item.verifiedAt || item.updatedAt || item.createdAt || 0)))
+      : null;
+    member.updatedAt = now;
+  }
+
+  return { ok: true, testimonial, verified: Boolean(verified) };
+}
+
+function sortPublicTestimonials(items = []) {
+  return [...items].sort((a, b) => {
+    if (Boolean(b.verified) !== Boolean(a.verified)) return Boolean(b.verified) - Boolean(a.verified);
+    return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+  });
 }
 
 export function recordTestimonialView(db, id, viewerKey = '') {
@@ -302,11 +397,62 @@ function pruneViewers(viewers = {}, limit = 10000) {
     .forEach(([key]) => delete viewers[key]);
 }
 
+
+export function recordSearchQuery(db, query = '', config = {}, meta = {}) {
+  normalizeDb(db);
+  const keyword = normalizeKeywordKey(query);
+  if (!keyword || keyword.length < 2) return { ok: false, reason: 'empty' };
+
+  const day = meta.day || getTodayKey(config.timezone || 'Asia/Jakarta');
+  if (!db.searchStats[day]) db.searchStats[day] = {};
+  const now = Date.now();
+  const current = db.searchStats[day][keyword] || {
+    keyword,
+    label: cleanSearchLabel(query) || keyword,
+    count: 0,
+    firstSearchedAt: now,
+    lastSearchedAt: now
+  };
+
+  current.count = Math.max(0, Number(current.count || 0)) + 1;
+  current.label = cleanSearchLabel(query) || current.label || keyword;
+  current.lastSearchedAt = now;
+  db.searchStats[day][keyword] = current;
+  pruneSearchStats(db.searchStats);
+
+  return { ok: true, day, keyword, item: current };
+}
+
+export function topSearchKeywords(db, config = {}, { day, limit = 5 } = {}) {
+  normalizeDb(db);
+  const targetDay = day || getTodayKey(config.timezone || 'Asia/Jakarta');
+  const entries = Object.values(db.searchStats?.[targetDay] || {});
+  return entries
+    .filter((item) => item && Number(item.count || 0) > 0)
+    .sort((a, b) => {
+      if (Number(b.count || 0) !== Number(a.count || 0)) return Number(b.count || 0) - Number(a.count || 0);
+      return Number(b.lastSearchedAt || 0) - Number(a.lastSearchedAt || 0);
+    })
+    .slice(0, Math.max(1, Number(limit || 5)));
+}
+
+export function topSearchKeywordToday(db, config = {}) {
+  return topSearchKeywords(db, config, { limit: 1 })[0] || null;
+}
+
+function pruneSearchStats(searchStats = {}, keepDays = 30) {
+  const days = Object.keys(searchStats).sort();
+  while (days.length > keepDays) {
+    const day = days.shift();
+    delete searchStats[day];
+  }
+}
+
 export function getTestimonialsByMember(db, jid, { includeHidden = false } = {}) {
   normalizeDb(db);
-  return db.testimonials
-    .filter((item) => item.jid === jid && (includeHidden || item.published))
-    .sort((a, b) => b.createdAt - a.createdAt);
+  return sortPublicTestimonials(
+    db.testimonials.filter((item) => item.jid === jid && (includeHidden || item.published))
+  );
 }
 
 export function getPublicTestimonialsByUsername(db, username) {
@@ -323,7 +469,7 @@ export function searchTestimonials(db, query = '', limit = 30) {
   const normalizedQuery = normalizeSearchText(query);
   const terms = normalizedQuery.split(' ').filter(Boolean);
 
-  const visible = db.testimonials.filter((item) => item.published);
+  const visible = sortPublicTestimonials(db.testimonials.filter((item) => item.published));
   const matched = !terms.length
     ? visible.slice(0, limit)
     : visible.filter((item) => {
@@ -348,7 +494,8 @@ export function searchTestimonials(db, query = '', limit = 30) {
       totalTestimonials: getTestimonialsByMember(db, item.jid).length,
       matchedTestimonials: 0,
       latestAt: 0,
-      samples: []
+      samples: [],
+      verified: Boolean(member.profile?.verified)
     };
 
     current.matchedTestimonials += 1;
@@ -367,10 +514,7 @@ export function searchTestimonials(db, query = '', limit = 30) {
 
 export function latestTestimonials(db, limit = 12) {
   normalizeDb(db);
-  return db.testimonials
-    .filter((item) => item.published)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, limit);
+  return sortPublicTestimonials(db.testimonials.filter((item) => item.published)).slice(0, limit);
 }
 
 export function resetDailyIfNeeded(member, config) {

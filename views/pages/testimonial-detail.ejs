@@ -38,7 +38,7 @@
           <% } %>
 
           <div class="detail-badges">
-            <span><%= mediaKindLabel(testimonial) %></span>
+            <span><%= testimonial.verified ? '✓ Terverifikasi' : mediaKindLabel(testimonial) %></span>
             <span><%= formatNumber(viewCountOf(testimonial)) %> dilihat</span>
           </div>
         </div>
@@ -50,8 +50,8 @@
         <div class="avatar"><%= ((member?.name || testimonial.memberName || testimonial.username) || 'M').charAt(0).toUpperCase() %></div>
         <div>
           <p class="eyebrow">Testimoni Member</p>
-          <h1 class="detail-title"><%= member?.name || testimonial.memberName || testimonial.username %></h1>
-          <p class="username">@<%= testimonial.username %></p>
+          <h1 class="detail-title"><%= member?.name || testimonial.memberName || testimonial.username %><% if (testimonial.verified || member?.profile?.verified) { %><span class="verified-badge large" title="Terverifikasi">✓</span><% } %></h1>
+          <p class="username">@<%= testimonial.username %><% if (testimonial.verified || member?.profile?.verified) { %> <span class="verified-text">Terverifikasi</span><% } %></p>
         </div>
       </div>
 
@@ -66,7 +66,7 @@
 
       <div class="detail-stat-grid">
         <div><span>Dilihat</span><strong><%= formatNumber(viewCountOf(testimonial)) %></strong></div>
-        <div><span>Tipe</span><strong><%= mediaKindLabel(testimonial) %></strong></div>
+        <div><span>Status</span><strong><%= testimonial.verified ? 'Terverifikasi' : 'Publik' %></strong></div>
         <div><span>Profil</span><strong>@<%= testimonial.username %></strong></div>
       </div>
 

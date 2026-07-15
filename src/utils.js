@@ -33,6 +33,7 @@ export function loadConfig(file = './config.json') {
     autoRead: Boolean(config.autoRead),
     publicBaseUrl: String(process.env.PUBLIC_BASE_URL || config.publicBaseUrl || `http://localhost:${process.env.PORT || 10000}`).replace(/\/$/, ''),
     webTitle: config.webTitle || 'Testimoni Member',
+    verifierNumbers: parseNumberList(process.env.TESTIMONIAL_VERIFIER_NUMBERS || config.verifierNumbers || ''),
     meta: {
       graphApiVersion: String(process.env.GRAPH_API_VERSION || config.meta?.graphApiVersion || 'v25.0').replace(/^\/+/, ''),
       accessToken: String(process.env.WHATSAPP_ACCESS_TOKEN || config.meta?.accessToken || '').trim(),
@@ -101,6 +102,11 @@ export function normalizePairingCode(input = '') {
 export function normalizePath(input = '') {
   const clean = String(input || '').trim() || '/webhook';
   return clean.startsWith('/') ? clean : `/${clean}`;
+}
+
+export function parseNumberList(input = '') {
+  const raw = Array.isArray(input) ? input.join(',') : String(input || '');
+  return [...new Set(raw.split(/[\s,;]+/).map((item) => normalizeNumber(item)).filter(Boolean))];
 }
 
 export function normalizeNumber(input = '') {

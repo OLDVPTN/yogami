@@ -10,12 +10,14 @@ import {
   getMember,
   getProfileUrl,
   getTestimonialsByMember,
+  findTestimonialById,
   neededXp,
   passiveMessageReward,
   registerMember,
   resetDailyIfNeeded,
   topMembers,
-  updateRedemption
+  updateRedemption,
+  setTestimonialVerified
 } from './db.js';
 import { findReward, rewardListText } from './rewards.js';
 import { saveTestimonialMedia } from './storage.js';
@@ -182,6 +184,16 @@ async function handleCommand(ctx) {
     case 'members':
       return ownerMemberListCommand(ctx);
 
+    case 'verifikasi':
+    case 'verify':
+    case 'verifytestimoni':
+      return verifierTestimonialCommand(ctx, true);
+
+    case 'unverifikasi':
+    case 'unverify':
+    case 'batalverifikasi':
+      return verifierTestimonialCommand(ctx, false);
+
     case 'pending':
       return ownerPendingCommand(ctx);
 
@@ -334,6 +346,53 @@ async function testimonialCommand(ctx) {
     `✅ *Testimoni berhasil dipublish!*\n\nProfil: ${getProfileUrl(ctx.config, member.account.username)}\nID: *${result.testimonial.id}*\nStorage: *${storedMedia.provider.toUpperCase()}*\nHashtag: ${result.testimonial.keywords.length ? result.testimonial.keywords.map((key) => `#${key}`).join(' ') : '-'}\n\nReward: +${formatNumber(pointReward)} poin, +${formatNumber(xpReward)} XP${xpResult.levelUp ? `\n✨ Level up ke *Level ${xpResult.currentLevel}*!` : ''}`
   );
   return true;
+}
+
+
+async function verifierTestimonialCommand(ctx, shouldVerify = true) {
+  if (!canVerifyTestimonials(ctx)) {
+    await ctx.reply('Command ini hanya bisa dipakai nomor verifier yang sudah diizinkan.');
+    return false;
+  }
+
+  const id = String(ctx.args[0] || '').trim();
+  if (!id) {
+    await ctx.reply(`Format: *${ctx.prefix}${shouldVerify ? 'verifikasi' : 'unverifikasi'} TST-ID*
+
+Contoh:
+*${ctx.prefix}${shouldVerify ? 'verifikasi' : 'unverifikasi'} TST-MABC123-XYZ999*`);
+    return false;
+  }
+
+  const existing = findTestimonialById(ctx.db, id);
+  if (!existing) {
+    await ctx.reply(`Testimoni dengan ID *${id}* tidak ditemukan.`);
+    return false;
+  }
+
+  const result = setTestimonialVerified(ctx.db, id, ctx.sender, shouldVerify);
+  if (!result.ok) {
+    await ctx.reply(`Gagal mengubah status verifikasi testimoni *${id}*.`);
+    return false;
+  }
+
+  const label = shouldVerify ? 'terverifikasi' : 'tidak terverifikasi';
+  await ctx.reply(
+    `${shouldVerify ? '✅' : '☑️'} *Status testimoni diperbarui*
+
+ID: *${result.testimonial.id}*
+User: *@${result.testimonial.username}*
+Status: *${label}*
+Link: ${ctx.config.publicBaseUrl}/t/${result.testimonial.id}`
+  );
+  return true;
+}
+
+function canVerifyTestimonials(ctx) {
+  if (ctx.isOwner) return true;
+  const senderNumber = jidToNumber(ctx.sender);
+  const allowed = Array.isArray(ctx.config.verifierNumbers) ? ctx.config.verifierNumbers : [];
+  return Boolean(senderNumber && allowed.includes(senderNumber));
 }
 
 async function webLinkCommand(ctx) {

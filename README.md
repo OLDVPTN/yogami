@@ -426,3 +426,47 @@ DB_LIVE_READ_MIN_MS=1000
 ```
 
 Dengan mode ini, halaman publik akan refresh data dari Neon sebelum render, sehingga penghapusan manual di Neon lebih cepat terlihat di website. Jika kamu menghapus data langsung dari Neon, sebaiknya pastikan tidak ada pending save dari aplikasi, atau restart service setelah penghapusan besar.
+
+
+## Trending keyword harian
+Homepage sekarang menampilkan keyword yang paling banyak dicari hari ini.
+Setiap request `/search?q=...` akan masuk ke tabel relational:
+
+```txt
+member_bot_search_stats
+```
+
+Hero card akan menampilkan:
+
+```txt
+Paling dicari hari ini
+#keyword
+3x dicari hari ini
+```
+
+Kalau belum ada pencarian hari ini, hero card fallback ke hashtag dari testimoni terbaru.
+
+
+## Verifikasi testimoni
+
+Homepage hanya menampilkan 4 testimoni pertama. Jika data lebih dari 4, tombol **Load more** akan muncul. Testimoni yang sudah terverifikasi otomatis diprioritaskan di bagian atas dan menampilkan centang biru pada testimoni serta akun member.
+
+Nomor yang boleh memverifikasi testimoni:
+
+```env
+OWNER_NUMBER=628xxxxxxxxxx
+TESTIMONIAL_VERIFIER_NUMBERS=628111111111,628222222222
+```
+
+Command WhatsApp:
+
+```txt
+.verifikasi TST-ID
+.unverifikasi TST-ID
+```
+
+Contoh:
+
+```txt
+.verifikasi TST-MABC123-XYZ999
+```

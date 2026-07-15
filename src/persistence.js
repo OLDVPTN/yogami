@@ -12,7 +12,7 @@ const DEFAULT_DB = {
   redemptions: []
 };
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let pool = null;
 let lastPoolUrl = '';
@@ -271,6 +271,12 @@ async function ensureSchema(client) {
     )
   `);
 
+  await client.query(`ALTER TABLE member_bot_testimonials ADD COLUMN IF NOT EXISTS watermarked BOOLEAN NOT NULL DEFAULT FALSE`);
+  await client.query(`ALTER TABLE member_bot_testimonials ADD COLUMN IF NOT EXISTS watermark_mode TEXT NOT NULL DEFAULT ''`);
+  await client.query(`ALTER TABLE member_bot_testimonials ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE`);
+  await client.query(`ALTER TABLE member_bot_testimonials ADD COLUMN IF NOT EXISTS verified_by TEXT NOT NULL DEFAULT ''`);
+  await client.query(`ALTER TABLE member_bot_testimonials ADD COLUMN IF NOT EXISTS verified_at BIGINT`);
+
   await client.query(`
     CREATE INDEX IF NOT EXISTS member_bot_testimonials_user_idx
     ON member_bot_testimonials (state_key, jid, created_at DESC)
@@ -279,6 +285,11 @@ async function ensureSchema(client) {
   await client.query(`
     CREATE INDEX IF NOT EXISTS member_bot_testimonials_keywords_idx
     ON member_bot_testimonials USING GIN (keywords)
+  `);
+
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS member_bot_testimonials_verified_idx
+    ON member_bot_testimonials (state_key, verified DESC, created_at DESC)
   `);
 
   await client.query(`
@@ -311,18 +322,39 @@ async function ensureSchema(client) {
     )
   `);
 
+
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS member_bot_search_stats (
+      state_key TEXT NOT NULL,
+      day TEXT NOT NULL,
+      keyword TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      count INTEGER NOT NULL DEFAULT 0,
+      first_searched_at BIGINT NOT NULL,
+      last_searched_at BIGINT NOT NULL,
+      PRIMARY KEY (state_key, day, keyword)
+    )
+  `);
+
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS member_bot_search_stats_day_idx
+    ON member_bot_search_stats (state_key, day, count DESC, last_searched_at DESC)
+  `);
+
   await markMeta(client, 'main', {}, { onlyIfMissing: true }).catch(() => {});
 }
 
 async function readRelationalState(client, stateKey) {
-  const [membersResult, testimonialsResult, vouchersResult, redemptionsResult] = await Promise.all([
+  const [membersResult, testimonialsResult, vouchersResult, redemptionsResult, searchStatsResult] = await Promise.all([
     client.query('SELECT * FROM member_bot_members WHERE state_key = $1 ORDER BY created_at ASC', [stateKey]),
-    client.query('SELECT * FROM member_bot_testimonials WHERE state_key = $1 ORDER BY created_at DESC', [stateKey]),
+    client.query('SELECT * FROM member_bot_testimonials WHERE state_key = $1 ORDER BY verified DESC, created_at DESC', [stateKey]),
     client.query('SELECT * FROM member_bot_vouchers WHERE state_key = $1 ORDER BY created_at DESC', [stateKey]),
-    client.query('SELECT * FROM member_bot_redemptions WHERE state_key = $1 ORDER BY created_at DESC', [stateKey])
+    client.query('SELECT * FROM member_bot_redemptions WHERE state_key = $1 ORDER BY created_at DESC', [stateKey]),
+    client.query('SELECT * FROM member_bot_search_stats WHERE state_key = $1 ORDER BY day DESC, count DESC, last_searched_at DESC', [stateKey])
   ]);
 
-  const hasAnyRows = membersResult.rowCount || testimonialsResult.rowCount || vouchersResult.rowCount || redemptionsResult.rowCount;
+  const hasAnyRows = membersResult.rowCount || testimonialsResult.rowCount || vouchersResult.rowCount || redemptionsResult.rowCount || searchStatsResult.rowCount;
   if (!hasAnyRows) return null;
 
   const db = structuredCloneSafe(DEFAULT_DB);
@@ -342,6 +374,18 @@ async function readRelationalState(client, stateKey) {
 
   db.redemptions = redemptionsResult.rows.map(rowToRedemption);
 
+  for (const row of searchStatsResult.rows) {
+    const item = rowToSearchStat(row);
+    if (!db.searchStats[item.day]) db.searchStats[item.day] = {};
+    db.searchStats[item.day][item.keyword] = {
+      keyword: item.keyword,
+      label: item.label,
+      count: item.count,
+      firstSearchedAt: item.firstSearchedAt,
+      lastSearchedAt: item.lastSearchedAt
+    };
+  }
+
   return normalizeDb(db);
 }
 
@@ -353,6 +397,7 @@ async function writeRelationalState(client, stateKey, inputDb) {
   try {
     await ensureSchema(client);
 
+    await client.query('DELETE FROM member_bot_search_stats WHERE state_key = $1', [stateKey]);
     await client.query('DELETE FROM member_bot_redemptions WHERE state_key = $1', [stateKey]);
     await client.query('DELETE FROM member_bot_vouchers WHERE state_key = $1', [stateKey]);
     await client.query('DELETE FROM member_bot_testimonials WHERE state_key = $1', [stateKey]);
@@ -398,12 +443,12 @@ async function writeRelationalState(client, stateKey, inputDb) {
       await client.query(
         `INSERT INTO member_bot_testimonials (
           state_key, id, jid, username, member_name, text, keywords, media_type,
-          media_url, storage_provider, storage_key, mimetype, size_bytes, views,
+          media_url, storage_provider, storage_key, mimetype, size_bytes, watermarked, watermark_mode, verified, verified_by, verified_at, views,
           published, created_at, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7::text[], $8,
-          $9, $10, $11, $12, $13, $14::jsonb,
-          $15, $16, $17
+          $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb,
+          $20, $21, $22
         )`,
         [
           stateKey,
@@ -419,6 +464,11 @@ async function writeRelationalState(client, stateKey, inputDb) {
           item.storageKey || '',
           item.mimetype || '',
           numberParam(item.sizeBytes, 0),
+          Boolean(item.watermarked),
+          item.watermarkMode || '',
+          Boolean(item.verified),
+          item.verifiedBy || '',
+          nullableNumber(item.verifiedAt),
           jsonParam(item.views || {}),
           item.published !== false,
           numberParam(item.createdAt, now),
@@ -463,6 +513,26 @@ async function writeRelationalState(client, stateKey, inputDb) {
           numberParam(redemption.updatedAt, now)
         ]
       );
+    }
+
+
+    for (const [day, entries] of Object.entries(db.searchStats || {})) {
+      for (const item of Object.values(entries || {})) {
+        await client.query(
+          `INSERT INTO member_bot_search_stats (
+            state_key, day, keyword, label, count, first_searched_at, last_searched_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            stateKey,
+            day,
+            item.keyword || item.label || '',
+            item.label || item.keyword || '',
+            intParam(item.count, 0),
+            numberParam(item.firstSearchedAt, now),
+            numberParam(item.lastSearchedAt, now)
+          ]
+        );
+      }
     }
 
     await markMeta(client, stateKey, {});
@@ -542,6 +612,11 @@ function rowToTestimonial(row) {
     storageKey: row.storage_key || '',
     mimetype: row.mimetype || '',
     sizeBytes: numberParam(row.size_bytes, 0),
+    watermarked: Boolean(row.watermarked),
+    watermarkMode: row.watermark_mode || '',
+    verified: Boolean(row.verified),
+    verifiedBy: row.verified_by || '',
+    verifiedAt: row.verified_at || null,
     views: row.views || {},
     published: row.published !== false,
     createdAt: numberParam(row.created_at, Date.now()),
@@ -572,6 +647,18 @@ function rowToRedemption(row) {
     status: row.status || 'pending',
     createdAt: numberParam(row.created_at, Date.now()),
     updatedAt: numberParam(row.updated_at, Date.now())
+  };
+}
+
+
+function rowToSearchStat(row) {
+  return {
+    day: row.day,
+    keyword: row.keyword,
+    label: row.label || row.keyword,
+    count: intParam(row.count, 0),
+    firstSearchedAt: numberParam(row.first_searched_at, Date.now()),
+    lastSearchedAt: numberParam(row.last_searched_at, Date.now())
   };
 }
 
