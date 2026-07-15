@@ -1,9 +1,9 @@
 <article class="testimonial-card">
   <a class="media" href="/@<%= item.username %>">
     <% if (item.mediaType === 'video') { %>
-      <video src="<%= item.mediaUrl %>" controls preload="metadata"></video>
+      <video src="<%= mediaDisplayUrl(item) %>" controls preload="metadata"></video>
     <% } else { %>
-      <img src="<%= item.mediaUrl %>" alt="Testimoni dari @<%= item.username %>" loading="lazy">
+      <img src="<%= mediaDisplayUrl(item) %>" alt="Testimoni dari @<%= item.username %>" loading="lazy">
     <% } %>
   </a>
   <div class="content">

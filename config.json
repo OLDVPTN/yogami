@@ -27,7 +27,8 @@
   "r2": {
     "bucket": "",
     "publicBaseUrl": "",
-    "uploadPrefix": "testimonials"
+    "uploadPrefix": "testimonials",
+    "serveMode": "proxy"
   },
   "database": {
     "provider": "local",

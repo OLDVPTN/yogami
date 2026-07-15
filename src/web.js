@@ -8,10 +8,12 @@ import {
   slugifyUsername
 } from './utils.js';
 import {
+  findTestimonialById,
   getPublicTestimonialsByUsername,
   latestTestimonials,
   searchTestimonials
 } from './db.js';
+import { readStoredMedia } from './storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,6 +101,27 @@ export function startWebServer(db, config, metaRuntime = null) {
     renderSearch(res, db, config, q);
   });
 
+  app.get('/media/:id', async (req, res) => {
+    const testimonial = findTestimonialById(db, req.params.id);
+    if (!testimonial) {
+      res.status(404).send('Media tidak ditemukan.');
+      return;
+    }
+
+    try {
+      const media = await readStoredMedia(testimonial, config);
+      res.setHeader('Content-Type', media.contentType || 'application/octet-stream');
+      res.setHeader('Cache-Control', media.cacheControl || 'public, max-age=86400');
+      res.setHeader('Content-Disposition', 'inline');
+      if (media.contentLength) res.setHeader('Content-Length', String(media.contentLength));
+      if (media.etag) res.setHeader('ETag', media.etag);
+      pipeMediaBody(media.body, res);
+    } catch (error) {
+      console.error('[media error]', error);
+      res.status(502).send(`Gagal membuka media: ${error.message}`);
+    }
+  });
+
   app.get('/connect', (req, res) => {
     res.render('pages/meta-setup', viewLocals(config, {
       title: 'Meta Cloud API Setup',
@@ -184,6 +207,49 @@ function viewLocals(config, locals = {}) {
     config,
     baseUrl: config.publicBaseUrl,
     webTitle: config.webTitle,
+    mediaDisplayUrl,
     ...locals
   };
 }
+
+function mediaDisplayUrl(item = {}) {
+  if (!item) return '';
+  if (item.storageKey || item.storageProvider === 'r2') return `/media/${encodeURIComponent(item.id)}`;
+  return item.mediaUrl || '';
+}
+
+function pipeMediaBody(body, res) {
+  if (!body) {
+    res.end();
+    return;
+  }
+
+  if (Buffer.isBuffer(body) || typeof body === 'string') {
+    res.end(body);
+    return;
+  }
+
+  if (typeof body.pipe === 'function') {
+    body.on('error', (error) => {
+      console.error('[media stream error]', error);
+      if (!res.headersSent) res.status(502);
+      res.end();
+    });
+    body.pipe(res);
+    return;
+  }
+
+  if (typeof body.transformToByteArray === 'function') {
+    body.transformToByteArray()
+      .then((bytes) => res.end(Buffer.from(bytes)))
+      .catch((error) => {
+        console.error('[media stream error]', error);
+        if (!res.headersSent) res.status(502);
+        res.end();
+      });
+    return;
+  }
+
+  res.end();
+}
+

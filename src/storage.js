@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { ensureDir } from './utils.js';
 
 const LOCAL_UPLOAD_DIR = './public/uploads/testimonials';
@@ -22,7 +22,8 @@ export function getStorageSettings(config = {}) {
       secretAccessKey: String(process.env.R2_SECRET_ACCESS_KEY || r2Config.secretAccessKey || '').trim(),
       bucket: String(process.env.R2_BUCKET || r2Config.bucket || '').trim(),
       publicBaseUrl: String(process.env.R2_PUBLIC_BASE_URL || r2Config.publicBaseUrl || '').trim().replace(/\/$/, ''),
-      uploadPrefix: String(process.env.R2_UPLOAD_PREFIX || r2Config.uploadPrefix || 'testimonials').trim().replace(/^\/+|\/+$/g, '')
+      uploadPrefix: String(process.env.R2_UPLOAD_PREFIX || r2Config.uploadPrefix || 'testimonials').trim().replace(/^\/+|\/+$/g, ''),
+      serveMode: String(process.env.MEDIA_SERVE_MODE || r2Config.serveMode || 'proxy').trim().toLowerCase()
     }
   };
 }
@@ -38,7 +39,7 @@ export function validateStorageSettings(config = {}) {
   if (!settings.r2.accessKeyId) missing.push('R2_ACCESS_KEY_ID');
   if (!settings.r2.secretAccessKey) missing.push('R2_SECRET_ACCESS_KEY');
   if (!settings.r2.bucket) missing.push('R2_BUCKET');
-  if (!settings.r2.publicBaseUrl) missing.push('R2_PUBLIC_BASE_URL');
+  if (settings.r2.serveMode === 'public' && !settings.r2.publicBaseUrl) missing.push('R2_PUBLIC_BASE_URL');
 
   return {
     ok: missing.length === 0,
@@ -89,7 +90,9 @@ async function uploadToR2({ buffer, username, mediaKind, mimetype, extension, se
   return {
     provider: 'r2',
     key,
-    url: `${settings.r2.publicBaseUrl}/${encodeObjectKey(key)}`,
+    url: settings.r2.serveMode === 'public' && settings.r2.publicBaseUrl
+      ? `${settings.r2.publicBaseUrl}/${encodeObjectKey(key)}`
+      : '',
     sizeBytes: buffer.length,
     mimetype: mimetype || fallbackContentType(mediaKind, extension)
   };
@@ -108,6 +111,52 @@ async function saveToLocal({ buffer, username, mimetype, extension }) {
     sizeBytes: buffer.length,
     mimetype
   };
+}
+
+
+export async function readStoredMedia(testimonial, config = {}) {
+  if (!testimonial) throw new Error('Testimoni tidak ditemukan.');
+
+  const provider = String(testimonial.storageProvider || '').toLowerCase();
+  if (provider === 'r2') {
+    const settings = getStorageSettings(config);
+    const key = testimonial.storageKey || '';
+    if (!key) throw new Error('Object key media kosong.');
+    const missing = validateStorageSettings({ storageProvider: 'r2', r2: settings.r2 }).missing || [];
+    const filteredMissing = missing.filter((name) => name !== 'R2_PUBLIC_BASE_URL');
+    if (filteredMissing.length) {
+      throw new Error(`Konfigurasi R2 belum lengkap: ${filteredMissing.join(', ')}`);
+    }
+
+    const result = await getR2Client(settings.r2).send(new GetObjectCommand({
+      Bucket: settings.r2.bucket,
+      Key: key
+    }));
+
+    return {
+      provider: 'r2',
+      body: result.Body,
+      contentType: result.ContentType || testimonial.mimetype || fallbackContentType(testimonial.mediaType),
+      contentLength: result.ContentLength || testimonial.sizeBytes || undefined,
+      cacheControl: result.CacheControl || 'public, max-age=86400',
+      etag: result.ETag || undefined
+    };
+  }
+
+  if (provider === 'local' || testimonial.mediaUrl?.startsWith('/uploads/')) {
+    const filename = testimonial.storageKey || String(testimonial.mediaUrl || '').split('/').pop();
+    const filePath = path.join(LOCAL_UPLOAD_DIR, filename);
+    const buffer = await fs.readFile(filePath);
+    return {
+      provider: 'local',
+      body: buffer,
+      contentType: testimonial.mimetype || fallbackContentType(testimonial.mediaType),
+      contentLength: buffer.length,
+      cacheControl: 'public, max-age=86400'
+    };
+  }
+
+  throw new Error('Provider media tidak didukung.');
 }
 
 function getR2Client(r2) {

@@ -305,3 +305,36 @@ Cek:
 - Isi `META_APP_SECRET` supaya signature webhook bisa divalidasi.
 - Jangan blast pesan massal tanpa consent/template yang benar.
 - Untuk trafik besar, pindahkan processing webhook ke queue agar respons ke Meta tetap cepat.
+
+## Perbaikan media R2 tidak muncul / URL dianggap berbahaya
+
+Versi ini memakai mode rekomendasi:
+
+```env
+MEDIA_SERVE_MODE=proxy
+R2_PUBLIC_BASE_URL=
+```
+
+Dengan mode `proxy`, file tetap disimpan di Cloudflare R2, tetapi website menampilkan media lewat domain aplikasi sendiri:
+
+```txt
+https://domainkamu.com/media/TST_xxxxx
+```
+
+Jadi bucket R2 tidak perlu dibuat public dan website tidak lagi membuka URL `r2.dev` atau `r2.cloudflarestorage.com` langsung dari browser.
+
+Kenapa ini lebih aman:
+
+- Bucket R2 boleh tetap private.
+- Browser hanya melihat domain website kamu, bukan endpoint R2.
+- Data lama yang punya `storageKey` tetap bisa tampil lewat `/media/:id`.
+- Mengurangi risiko warning dari domain publik sementara seperti `r2.dev`.
+
+Kalau kamu tetap ingin public URL langsung dari R2, baru pakai:
+
+```env
+MEDIA_SERVE_MODE=public
+R2_PUBLIC_BASE_URL=https://media.domainkamu.com
+```
+
+Untuk production, gunakan custom domain R2 sendiri, bukan `r2.dev`.

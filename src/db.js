@@ -213,18 +213,21 @@ export function addTestimonial(db, member, payload = {}) {
     return { ok: false, reason: 'no_account' };
   }
 
+  const id = makeId('TST');
   const text = String(payload.text || '').trim().slice(0, 1000);
+  const storageKey = payload.storageKey || '';
+  const mediaUrl = payload.mediaUrl || (storageKey ? `/media/${id}` : '');
   const testimonial = normalizeTestimonial({
-    id: makeId('TST'),
+    id,
     jid: member.jid,
     username: member.account.username,
     memberName: member.name || member.account.username,
     text,
     keywords: extractKeywords(`${text} ${payload.extraKeywords || ''}`),
     mediaType: payload.mediaType || 'image',
-    mediaUrl: payload.mediaUrl,
+    mediaUrl,
     storageProvider: payload.storageProvider || 'local',
-    storageKey: payload.storageKey || '',
+    storageKey,
     mimetype: payload.mimetype || '',
     sizeBytes: payload.sizeBytes || 0,
     published: true,
@@ -237,6 +240,13 @@ export function addTestimonial(db, member, payload = {}) {
   member.testimonialCount = getTestimonialsByMember(db, member.jid).length;
   member.updatedAt = Date.now();
   return { ok: true, testimonial };
+}
+
+export function findTestimonialById(db, id) {
+  normalizeDb(db);
+  const normalizedId = String(id || '').trim();
+  if (!normalizedId) return null;
+  return db.testimonials.find((item) => item.id === normalizedId && item.published !== false) || null;
 }
 
 export function getTestimonialsByMember(db, jid, { includeHidden = false } = {}) {
