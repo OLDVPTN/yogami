@@ -6,7 +6,9 @@ Fitur inti:
 
 - Member daftar akun lewat WhatsApp: `.akun username password`
 - Member kirim testimoni gambar/video lewat WhatsApp dengan caption `.testimoni ...`
-- Media testimoni disimpan ke Cloudflare R2
+- Media testimoni disimpan ke Cloudflare R2 dan ditampilkan lewat proxy `/media/:id`
+- Tampilan web responsif dengan indikator gambar/video dan jumlah dilihat per testimoni
+- Proteksi download dasar: tidak expose URL R2, disable klik kanan/drag, dan `controlsList=nodownload` untuk video
 - Hashtag testimoni hanya diambil dari kata/judul pertama setelah command, contoh `thalassemia` → `#thalassemia`
 - Data member, testimoni, poin, XP, voucher, dan redeem disimpan ke Neon PostgreSQL atau local fallback
 - Website publik EJS: `/`, `/search`, `/@username`
@@ -91,7 +93,8 @@ R2_ACCOUNT_ID=isi_account_id_cloudflare
 R2_ACCESS_KEY_ID=isi_access_key_id_r2
 R2_SECRET_ACCESS_KEY=isi_secret_access_key_r2
 R2_BUCKET=poko-testimoni
-R2_PUBLIC_BASE_URL=https://media.domainkamu.com
+MEDIA_SERVE_MODE=proxy
+R2_PUBLIC_BASE_URL=
 R2_UPLOAD_PREFIX=testimonials
 ```
 
@@ -159,10 +162,11 @@ R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET=poko-testimoni
-R2_PUBLIC_BASE_URL=https://media.domainkamu.com
+MEDIA_SERVE_MODE=proxy
+R2_PUBLIC_BASE_URL=
 ```
 
-`R2_PUBLIC_BASE_URL` harus URL publik bucket, bisa custom domain atau public `r2.dev` URL.
+Mode rekomendasi adalah `MEDIA_SERVE_MODE=proxy`, sehingga bucket R2 boleh tetap private dan website menampilkan media lewat `/media/:id`. `R2_PUBLIC_BASE_URL` hanya diisi kalau kamu sengaja memakai mode `public`.
 
 ## 7. Setup Neon
 
@@ -287,8 +291,8 @@ Cek:
 Cek:
 
 - R2 env lengkap
-- Bucket publik sudah aktif
-- `R2_PUBLIC_BASE_URL` bisa diakses publik
+- `MEDIA_SERVE_MODE=proxy` untuk mode aman/private
+- Bucket dan object key benar
 - Ukuran media tidak melewati `maxMediaMb`
 
 ### Database kembali kosong setelah redeploy
@@ -339,3 +343,26 @@ R2_PUBLIC_BASE_URL=https://media.domainkamu.com
 ```
 
 Untuk production, gunakan custom domain R2 sendiri, bukan `r2.dev`.
+
+## 13. Tampilan web, proteksi media, dan view counter
+
+Versi ini sudah memakai layout EJS/CSS baru yang lebih responsif untuk mobile dan desktop. Kartu testimoni menampilkan:
+
+- Label jenis media: gambar atau video
+- Jumlah dilihat per testimoni
+- Hashtag tunggal dari judul/kata pertama
+- Media dari endpoint aplikasi sendiri: `/media/:id`
+
+View counter dihitung saat media berhasil diminta dari route `/media/:id`. Sistem menyimpan hash sederhana dari IP + user agent agar refresh atau beberapa range request video dari user yang sama tidak langsung menambah angka berkali-kali. Data view disimpan di database bersama object testimoni.
+
+Proteksi download yang diterapkan:
+
+- URL R2 asli tidak ditampilkan ke browser
+- Semua media lewat proxy `/media/:id`
+- Header `Content-Disposition: inline`
+- Header `X-Robots-Tag: noindex, nofollow, noarchive`
+- Disable klik kanan dan drag pada area media
+- Video memakai `controlsList="nodownload"` dan `disablePictureInPicture`
+
+Catatan penting: di web, media tidak bisa dibuat 100% anti-download. Kalau file bisa dilihat di browser, orang teknis masih bisa mengambilnya melalui devtools, cache, screenshot, atau screen recording. Proteksi ini bertujuan mengurangi download mudah untuk pengguna umum.
+

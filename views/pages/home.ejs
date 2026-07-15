@@ -2,11 +2,24 @@
 <%- include('../partials/topbar') %>
 
 <main class="container">
-  <section class="hero">
-    <p class="eyebrow">Poko Member Stories</p>
-    <h1>Cari testimoni asli dari member.</h1>
-    <p class="lead">Ketik keyword seperti <strong>thalassemia</strong>, <strong>UMKM</strong>, <strong>produk</strong>, atau pengalaman lain. Hasil pencarian akan mengarah ke profil member yang punya testimoni relevan.</p>
-    <%- include('../partials/search-form', { value: query }) %>
+  <section class="hero hero-home">
+    <div class="hero-copy">
+      <p class="eyebrow">Poko Member Stories</p>
+      <h1>Cari testimoni asli dari member.</h1>
+      <p class="lead">Temukan pengalaman member berdasarkan keyword. Buka profil pengguna, lihat gambar atau video testimoni, lalu bandingkan pengalaman yang paling relevan.</p>
+      <%- include('../partials/search-form', { value: query }) %>
+      <div class="hero-stats" aria-label="Statistik platform">
+        <span><strong><%= formatNumber(stats?.testimonials || 0) %></strong> Testimoni</span>
+        <span><strong><%= formatNumber(stats?.members || 0) %></strong> Member</span>
+        <span><strong><%= formatNumber(stats?.views || 0) %></strong> Dilihat</span>
+      </div>
+    </div>
+    <div class="hero-card" aria-hidden="true">
+      <div class="hero-orb"></div>
+      <p>Search by keyword</p>
+      <strong>#thalasemia</strong>
+      <span>Gambar · Video · Profil Member</span>
+    </div>
   </section>
 
   <section class="section-head">
@@ -14,6 +27,7 @@
       <p class="eyebrow">Terbaru</p>
       <h2>Testimoni terbaru</h2>
     </div>
+    <a class="text-link" href="/search">Lihat semua</a>
   </section>
 
   <%- include('../partials/testimonial-grid', { testimonials: latest, config }) %>

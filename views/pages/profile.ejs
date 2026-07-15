@@ -4,19 +4,27 @@
 <main class="container">
   <section class="profile-hero">
     <div class="avatar"><%= (member.name || member.account.username).charAt(0).toUpperCase() %></div>
-    <div>
+    <div class="profile-info">
       <p class="eyebrow">Profil Member</p>
       <h1><%= member.name || member.account.username %></h1>
       <p class="username">@<%= member.account.username %></p>
       <div class="stats">
         <span><%= formatNumber(testimonials.length) %> testimoni</span>
-        <span>Level <%= formatNumber(member.level || 1) %></span>
-        <span><%= formatNumber(member.points || 0) %> poin</span>
+        <span><%= formatNumber(profileStats?.views || 0) %> dilihat</span>
+        <span><%= formatNumber(profileStats?.images || 0) %> gambar</span>
+        <span><%= formatNumber(profileStats?.videos || 0) %> video</span>
       </div>
     </div>
   </section>
 
-  <%- include('../partials/search-form', { value: '', placeholder: 'Cari testimoni lain' }) %>
+  <section class="toolbar-card">
+    <div>
+      <p class="eyebrow">Jelajahi</p>
+      <h2>Cari testimoni lain</h2>
+    </div>
+    <%- include('../partials/search-form', { value: '', placeholder: 'Cari keyword lain' }) %>
+  </section>
+
   <%- include('../partials/testimonial-grid', { testimonials, config }) %>
 </main>
 

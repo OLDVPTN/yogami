@@ -117,4 +117,8 @@ const metaRuntime = {
   })
 };
 
-startWebServer(db, config, metaRuntime);
+startWebServer(db, config, metaRuntime, {
+  onDatabaseChange: () => {
+    saveNow().catch((error) => console.error(chalk.red('[database save error]'), error.message));
+  }
+});

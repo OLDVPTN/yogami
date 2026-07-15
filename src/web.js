@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,6 +12,7 @@ import {
   findTestimonialById,
   getPublicTestimonialsByUsername,
   latestTestimonials,
+  recordTestimonialView,
   searchTestimonials
 } from './db.js';
 import { readStoredMedia } from './storage.js';
@@ -19,11 +21,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
-export function startWebServer(db, config, metaRuntime = null) {
+export function startWebServer(db, config, metaRuntime = null, options = {}) {
   const app = express();
   const port = Number(process.env.PORT || 10000);
 
   app.disable('x-powered-by');
+  app.set('trust proxy', true);
   app.set('view engine', 'ejs');
   app.set('views', path.join(ROOT_DIR, 'views'));
 
@@ -38,11 +41,10 @@ export function startWebServer(db, config, metaRuntime = null) {
       req.rawBody = buf;
     }
   }));
-  app.use('/assets', express.static(path.join(ROOT_DIR, 'public')));
-  app.use('/uploads', express.static(path.join(ROOT_DIR, 'public/uploads'), {
-    maxAge: '7d',
-    immutable: true
-  }));
+  app.get('/assets/styles.css', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(ROOT_DIR, 'public/styles.css'));
+  });
 
   const webhookPath = config.meta?.webhookPath || '/webhook';
 
@@ -88,11 +90,13 @@ export function startWebServer(db, config, metaRuntime = null) {
     if (q) return renderSearch(res, db, config, q);
 
     const latest = latestTestimonials(db, 12);
+    const stats = buildPublicStats(db);
     res.render('pages/home', viewLocals(config, {
       title: config.webTitle,
       description: 'Cari testimoni member berdasarkan keyword, lalu buka profil pengguna untuk melihat semua testimoni mereka.',
       query: q,
-      latest
+      latest,
+      stats
     }));
   });
 
@@ -109,10 +113,20 @@ export function startWebServer(db, config, metaRuntime = null) {
     }
 
     try {
-      const media = await readStoredMedia(testimonial, config);
+      const media = await readStoredMedia(testimonial, config, { rangeHeader: req.headers.range });
+      const viewResult = maybeRecordMediaView(db, req, testimonial.id);
+      if (viewResult.counted && typeof options.onDatabaseChange === 'function') {
+        options.onDatabaseChange({ reason: 'testimonial_view', testimonialId: testimonial.id });
+      }
+
+      res.status(media.statusCode || 200);
       res.setHeader('Content-Type', media.contentType || 'application/octet-stream');
-      res.setHeader('Cache-Control', media.cacheControl || 'public, max-age=86400');
-      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('Cache-Control', media.cacheControl || 'private, max-age=3600');
+      res.setHeader('Content-Disposition', 'inline; filename="testimonial-media"');
+      res.setHeader('Accept-Ranges', media.acceptRanges || 'bytes');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      if (media.contentRange) res.setHeader('Content-Range', media.contentRange);
       if (media.contentLength) res.setHeader('Content-Length', String(media.contentLength));
       if (media.etag) res.setHeader('ETag', media.etag);
       pipeMediaBody(media.body, res);
@@ -150,7 +164,8 @@ export function startWebServer(db, config, metaRuntime = null) {
       title: `@${member.account.username} — ${displayName}`,
       description: `Kumpulan testimoni dari ${displayName}.`,
       member,
-      testimonials
+      testimonials,
+      profileStats: buildProfileStats(testimonials)
     }));
   });
 
@@ -208,14 +223,60 @@ function viewLocals(config, locals = {}) {
     baseUrl: config.publicBaseUrl,
     webTitle: config.webTitle,
     mediaDisplayUrl,
+    mediaKindLabel,
+    viewCountOf,
     ...locals
   };
 }
 
 function mediaDisplayUrl(item = {}) {
-  if (!item) return '';
-  if (item.storageKey || item.storageProvider === 'r2') return `/media/${encodeURIComponent(item.id)}`;
-  return item.mediaUrl || '';
+  if (!item?.id) return '';
+  return `/media/${encodeURIComponent(item.id)}`;
+}
+
+function mediaKindLabel(item = {}) {
+  return item.mediaType === 'video' ? 'Video' : 'Gambar';
+}
+
+function viewCountOf(item = {}) {
+  return Math.max(0, Number(item.views?.count || item.viewCount || 0));
+}
+
+function buildPublicStats(db = {}) {
+  const testimonials = Array.isArray(db.testimonials) ? db.testimonials.filter((item) => item.published !== false) : [];
+  const members = Object.values(db.members || {}).filter((member) => member.account?.username && member.profile?.published !== false);
+  const totalViews = testimonials.reduce((sum, item) => sum + viewCountOf(item), 0);
+  return {
+    testimonials: testimonials.length,
+    members: members.length,
+    views: totalViews
+  };
+}
+
+function buildProfileStats(testimonials = []) {
+  return {
+    views: testimonials.reduce((sum, item) => sum + viewCountOf(item), 0),
+    images: testimonials.filter((item) => item.mediaType !== 'video').length,
+    videos: testimonials.filter((item) => item.mediaType === 'video').length
+  };
+}
+
+function maybeRecordMediaView(db, req, testimonialId) {
+  if (req.method === 'HEAD' || isLikelyBot(req.headers['user-agent'])) {
+    return { counted: false };
+  }
+  const viewerKey = makeViewerKey(req);
+  return recordTestimonialView(db, testimonialId, viewerKey);
+}
+
+function makeViewerKey(req) {
+  const ip = String(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 240);
+  return crypto.createHash('sha256').update(`${ip}|${userAgent}`).digest('hex').slice(0, 32);
+}
+
+function isLikelyBot(userAgent = '') {
+  return /bot|crawler|spider|preview|facebookexternalhit|whatsapp|telegram|slurp|bing|google|lighthouse/i.test(String(userAgent || ''));
 }
 
 function pipeMediaBody(body, res) {

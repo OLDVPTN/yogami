@@ -110,6 +110,17 @@ function normalizeMember(member, jid = '') {
   return member;
 }
 
+
+function normalizeTestimonialViews(views = {}, legacyCount = 0) {
+  const safeViews = views && typeof views === 'object' ? views : {};
+  const viewers = safeViews.viewers && typeof safeViews.viewers === 'object' ? safeViews.viewers : {};
+  return {
+    count: Math.max(0, Number(safeViews.count ?? legacyCount ?? 0)),
+    lastViewedAt: safeViews.lastViewedAt || null,
+    viewers
+  };
+}
+
 function normalizeTestimonial(item = {}) {
   if (!item || typeof item !== 'object') return null;
   if (!item.id || !item.jid || !item.username || !item.mediaUrl) return null;
@@ -126,6 +137,7 @@ function normalizeTestimonial(item = {}) {
     storageKey: item.storageKey || '',
     mimetype: item.mimetype || '',
     sizeBytes: Number(item.sizeBytes || 0),
+    views: normalizeTestimonialViews(item.views, item.viewCount),
     published: item.published !== false,
     createdAt: item.createdAt || Date.now(),
     updatedAt: item.updatedAt || item.createdAt || Date.now()
@@ -249,6 +261,41 @@ export function findTestimonialById(db, id) {
   const normalizedId = String(id || '').trim();
   if (!normalizedId) return null;
   return db.testimonials.find((item) => item.id === normalizedId && item.published !== false) || null;
+}
+
+export function recordTestimonialView(db, id, viewerKey = '') {
+  const testimonial = findTestimonialById(db, id);
+  if (!testimonial) return { ok: false, reason: 'not_found' };
+
+  if (!testimonial.views || typeof testimonial.views !== 'object') {
+    testimonial.views = normalizeTestimonialViews(testimonial.views, testimonial.viewCount);
+  }
+
+  const key = String(viewerKey || '').trim();
+  const now = Date.now();
+  const alreadySeen = key && testimonial.views.viewers?.[key];
+
+  if (!alreadySeen) {
+    testimonial.views.count = Math.max(0, Number(testimonial.views.count || 0)) + 1;
+    testimonial.views.lastViewedAt = now;
+    if (key) {
+      testimonial.views.viewers[key] = now;
+      pruneViewers(testimonial.views.viewers, 10000);
+    }
+    testimonial.updatedAt = now;
+    return { ok: true, counted: true, count: testimonial.views.count, testimonial };
+  }
+
+  return { ok: true, counted: false, count: testimonial.views.count, testimonial };
+}
+
+function pruneViewers(viewers = {}, limit = 10000) {
+  const entries = Object.entries(viewers);
+  if (entries.length <= limit) return;
+  entries
+    .sort((a, b) => Number(a[1] || 0) - Number(b[1] || 0))
+    .slice(0, entries.length - limit)
+    .forEach(([key]) => delete viewers[key]);
 }
 
 export function getTestimonialsByMember(db, jid, { includeHidden = false } = {}) {

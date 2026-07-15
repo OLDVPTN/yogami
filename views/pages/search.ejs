@@ -5,12 +5,17 @@
   <section class="hero small">
     <p class="eyebrow">Pencarian</p>
     <h1><%= query ? `Hasil untuk “${query}”` : 'Cari testimoni member' %></h1>
-    <p class="lead"><%= query ? `${formatNumber(results.length)} profil member ditemukan.` : 'Masukkan keyword untuk mencari testimoni.' %></p>
+    <p class="lead"><%= query ? `${formatNumber(results.length)} profil member ditemukan.` : 'Masukkan keyword untuk menemukan profil member dengan testimoni relevan.' %></p>
     <%- include('../partials/search-form', { value: query }) %>
   </section>
 
   <% if (hasQuery) { %>
     <%- include('../partials/user-results', { results, query }) %>
+  <% } else { %>
+    <section class="empty glass-empty">
+      <h2>Mulai dari keyword sederhana.</h2>
+      <p>Contoh: “thalasemia”, “produk”, “pelayanan”, atau nama pengalaman yang ingin kamu cari.</p>
+    </section>
   <% } %>
 </main>
 

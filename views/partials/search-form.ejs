@@ -1,8 +1,10 @@
 <form class="search" action="/search" method="get">
+  <label class="sr-only" for="search-q">Cari testimoni</label>
   <input
+    id="search-q"
     name="q"
     value="<%= typeof value !== 'undefined' ? value : '' %>"
-    placeholder="<%= typeof placeholder !== 'undefined' ? placeholder : 'Cari: testimoni thalassemia' %>"
+    placeholder="<%= typeof placeholder !== 'undefined' ? placeholder : 'Cari: thalasemia, skincare, UMKM...' %>"
     autocomplete="off"
   >
   <button type="submit">Cari</button>

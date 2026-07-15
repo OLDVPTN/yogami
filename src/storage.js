@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { createReadStream } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -114,7 +115,7 @@ async function saveToLocal({ buffer, username, mimetype, extension }) {
 }
 
 
-export async function readStoredMedia(testimonial, config = {}) {
+export async function readStoredMedia(testimonial, config = {}, options = {}) {
   if (!testimonial) throw new Error('Testimoni tidak ditemukan.');
 
   const provider = String(testimonial.storageProvider || '').toLowerCase();
@@ -128,17 +129,22 @@ export async function readStoredMedia(testimonial, config = {}) {
       throw new Error(`Konfigurasi R2 belum lengkap: ${filteredMissing.join(', ')}`);
     }
 
+    const rangeHeader = normalizeRangeHeader(options.rangeHeader);
     const result = await getR2Client(settings.r2).send(new GetObjectCommand({
       Bucket: settings.r2.bucket,
-      Key: key
+      Key: key,
+      ...(rangeHeader ? { Range: rangeHeader } : {})
     }));
 
     return {
       provider: 'r2',
       body: result.Body,
+      statusCode: result.ContentRange ? 206 : 200,
       contentType: result.ContentType || testimonial.mimetype || fallbackContentType(testimonial.mediaType),
       contentLength: result.ContentLength || testimonial.sizeBytes || undefined,
-      cacheControl: result.CacheControl || 'public, max-age=86400',
+      contentRange: result.ContentRange || undefined,
+      acceptRanges: result.AcceptRanges || 'bytes',
+      cacheControl: result.CacheControl || 'private, max-age=3600',
       etag: result.ETag || undefined
     };
   }
@@ -146,17 +152,64 @@ export async function readStoredMedia(testimonial, config = {}) {
   if (provider === 'local' || testimonial.mediaUrl?.startsWith('/uploads/')) {
     const filename = testimonial.storageKey || String(testimonial.mediaUrl || '').split('/').pop();
     const filePath = path.join(LOCAL_UPLOAD_DIR, filename);
+    const stat = await fs.stat(filePath);
+    const localRange = parseLocalRange(options.rangeHeader, stat.size);
+
+    if (localRange) {
+      return {
+        provider: 'local',
+        body: createReadStream(filePath, { start: localRange.start, end: localRange.end }),
+        statusCode: 206,
+        contentType: testimonial.mimetype || fallbackContentType(testimonial.mediaType),
+        contentLength: localRange.end - localRange.start + 1,
+        contentRange: `bytes ${localRange.start}-${localRange.end}/${stat.size}`,
+        acceptRanges: 'bytes',
+        cacheControl: 'private, max-age=3600'
+      };
+    }
+
     const buffer = await fs.readFile(filePath);
     return {
       provider: 'local',
       body: buffer,
+      statusCode: 200,
       contentType: testimonial.mimetype || fallbackContentType(testimonial.mediaType),
       contentLength: buffer.length,
-      cacheControl: 'public, max-age=86400'
+      acceptRanges: 'bytes',
+      cacheControl: 'private, max-age=3600'
     };
   }
 
   throw new Error('Provider media tidak didukung.');
+}
+
+
+function normalizeRangeHeader(value = '') {
+  const header = String(value || '').trim();
+  if (!/^bytes=\d*-\d*(,\d*-\d*)?$/.test(header)) return '';
+  // Keep single-range requests only. Multi-range responses are unnecessary for this app.
+  if (header.includes(',')) return '';
+  return header;
+}
+
+function parseLocalRange(value = '', size = 0) {
+  const header = normalizeRangeHeader(value);
+  if (!header || !size) return null;
+  const match = header.match(/^bytes=(\d*)-(\d*)$/);
+  if (!match) return null;
+
+  let start = match[1] ? Number(match[1]) : 0;
+  let end = match[2] ? Number(match[2]) : size - 1;
+
+  if (!match[1] && match[2]) {
+    const suffix = Math.max(0, Number(match[2]));
+    start = Math.max(0, size - suffix);
+    end = size - 1;
+  }
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (start < 0 || end < start || start >= size) return null;
+  return { start, end: Math.min(end, size - 1) };
 }
 
 function getR2Client(r2) {

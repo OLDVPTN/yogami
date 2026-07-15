@@ -1,19 +1,41 @@
 <article class="testimonial-card">
-  <a class="media" href="/@<%= item.username %>">
-    <% if (item.mediaType === 'video') { %>
-      <video src="<%= mediaDisplayUrl(item) %>" controls preload="metadata"></video>
-    <% } else { %>
-      <img src="<%= mediaDisplayUrl(item) %>" alt="Testimoni dari @<%= item.username %>" loading="lazy">
-    <% } %>
-  </a>
+  <div class="media-shell no-save" oncontextmenu="return false">
+    <a class="media" href="/@<%= item.username %>" aria-label="Buka profil @<%= item.username %>">
+      <% if (item.mediaType === 'video') { %>
+        <video
+          src="<%= mediaDisplayUrl(item) %>"
+          controls
+          controlsList="nodownload noplaybackrate noremoteplayback"
+          disablePictureInPicture
+          playsinline
+          preload="metadata"
+          oncontextmenu="return false"
+        ></video>
+      <% } else { %>
+        <img
+          src="<%= mediaDisplayUrl(item) %>"
+          alt="Testimoni dari @<%= item.username %>"
+          loading="lazy"
+          draggable="false"
+          oncontextmenu="return false"
+        >
+      <% } %>
+    </a>
+    <div class="media-badges">
+      <span><%= item.mediaType === 'video' ? '▶ Video' : '● Gambar' %></span>
+      <span><%= formatNumber(viewCountOf(item)) %> dilihat</span>
+    </div>
+  </div>
   <div class="content">
-    <a class="author" href="/@<%= item.username %>">@<%= item.username %></a>
+    <div class="card-topline">
+      <a class="author" href="/@<%= item.username %>">@<%= item.username %></a>
+      <time><%= formatDateTime(item.createdAt, config.timezone) %></time>
+    </div>
     <p><%= item.text %></p>
     <div class="keywords">
       <% (item.keywords || []).slice(0, 1).forEach((key) => { %>
         <a href="/search?q=<%= encodeURIComponent(key) %>">#<%= key %></a>
       <% }) %>
     </div>
-    <time><%= formatDateTime(item.createdAt, config.timezone) %></time>
   </div>
 </article>

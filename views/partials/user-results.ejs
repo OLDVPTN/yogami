@@ -1,5 +1,5 @@
 <% if (!results.length) { %>
-  <section class="empty">
+  <section class="empty glass-empty">
     <h2>Belum ada hasil.</h2>
     <p>Coba keyword lain yang lebih umum, misalnya “kesehatan”, “produk”, atau “pelayanan”.</p>
   </section>
@@ -9,8 +9,13 @@
       <a class="user-card" href="/@<%= item.username %>">
         <div class="avatar small"><%= (item.name || item.username).charAt(0).toUpperCase() %></div>
         <div class="user-main">
-          <h2><%= item.name %></h2>
-          <p>@<%= item.username %></p>
+          <div class="user-line">
+            <div>
+              <h2><%= item.name %></h2>
+              <p>@<%= item.username %></p>
+            </div>
+            <span class="arrow">↗</span>
+          </div>
           <div class="stats compact">
             <span><%= formatNumber(item.matchedTestimonials) %> cocok</span>
             <span><%= formatNumber(item.totalTestimonials) %> total</span>

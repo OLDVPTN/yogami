@@ -1,6 +1,9 @@
 <header class="topbar">
-  <a class="brand" href="/"><%= config.webTitle %></a>
-  <nav>
+  <a class="brand" href="/" aria-label="Beranda <%= config.webTitle %>">
+    <span class="brand-mark">✦</span>
+    <span><%= config.webTitle %></span>
+  </a>
+  <nav class="nav-links" aria-label="Navigasi utama">
     <a href="/">Home</a>
     <a href="/search">Search</a>
     <a href="/connect">Meta API</a>
