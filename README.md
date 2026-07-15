@@ -394,3 +394,16 @@ WATERMARK_EMBED_VIDEOS=true
 ```
 
 Catatan: watermark permanen hanya berlaku untuk media baru setelah env aktif. Media lama perlu upload ulang kalau ingin watermark tertanam.
+
+
+## Database Neon relational
+
+Versi ini tidak lagi menyimpan semua data di satu baris `app_state`. Saat `DB_PROVIDER=neon`, aplikasi membuat tabel terpisah:
+
+- `member_bot_members` untuk akun/profil/level/poin per member
+- `member_bot_testimonials` untuk testimoni per user
+- `member_bot_vouchers` untuk voucher
+- `member_bot_redemptions` untuk request redeem
+- `member_bot_meta` untuk metadata schema
+
+Kalau database lama masih punya data di `app_state`, aplikasi akan mencoba migrasi otomatis saat start pertama. Setelah migrasi, data aktif dibaca dan disimpan dari tabel relational. Tabel `app_state` tidak langsung dihapus agar tetap ada backup sementara.

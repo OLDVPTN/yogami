@@ -31,7 +31,7 @@ function banner() {
   console.log(chalk.gray(`Prefix: ${config.prefix} | Timezone: ${config.timezone}`));
   console.log(chalk.gray(`Webhook: ${config.publicBaseUrl}${config.meta.webhookPath}`));
   console.log(chalk.gray(`Storage: ${config.storageProvider.toUpperCase()}${config.storageProvider === 'r2' && config.r2?.bucket ? ` | Bucket: ${config.r2.bucket}` : ''}`));
-  console.log(chalk.gray(`Database: ${config.database.provider.toUpperCase()}${config.database.provider === 'neon' ? ` | State: ${config.database.stateKey}` : ''}`));
+  console.log(chalk.gray(`Database: ${config.database.provider.toUpperCase()}${config.database.provider === 'neon' ? ` | Schema: relational | State: ${config.database.stateKey}` : ''}`));
   console.log(chalk.gray(`Graph API: ${config.meta.graphApiVersion} | Phone Number ID: ${config.meta.phoneNumberId || '-'}\n`));
 }
 
