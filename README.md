@@ -372,3 +372,25 @@ Catatan penting: di web, media tidak bisa dibuat 100% anti-download. Kalau file 
 - Halaman detail testimoni ala Instagram di `/t/:id`
 - View counter dihitung dari klik halaman detail, bukan dari load file media
 - Watermark visual di halaman detail untuk gambar dan video
+
+
+## Watermark dan ukuran media
+Default baru:
+
+```env
+WATERMARK_MODE=both
+WATERMARK_EMBED_IMAGES=true
+WATERMARK_EMBED_VIDEOS=false
+WATERMARK_POSITION=bottom-right
+WATERMARK_OPACITY=0.76
+```
+
+- Gambar baru diberi watermark permanen sebelum di-upload ke R2.
+- Video tetap memakai watermark display di halaman detail karena embedded video butuh re-encode FFmpeg.
+- Kalau server kuat dan kamu siap proses upload video lebih lama, aktifkan:
+
+```env
+WATERMARK_EMBED_VIDEOS=true
+```
+
+Catatan: watermark permanen hanya berlaku untuk media baru setelah env aktif. Media lama perlu upload ulang kalau ingin watermark tertanam.

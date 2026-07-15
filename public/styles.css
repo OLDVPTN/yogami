@@ -315,3 +315,34 @@ time { color: var(--muted); font-size: .82rem; white-space: nowrap; }
   .watermark-layer { grid-template-columns: repeat(2, minmax(0,1fr)); gap: .9rem; padding: .75rem; }
   .watermark-layer span { font-size: .68rem; }
 }
+
+
+/* Detail media sizing fix */
+.detail-layout { grid-template-columns: minmax(0, 680px) minmax(320px, 420px); justify-content: center; }
+.detail-main { padding: .8rem; }
+.detail-sidebar { position: sticky; top: 5.6rem; }
+.detail-media { min-height: 0; height: min(74vh, 720px); max-height: 720px; border-radius: 1.35rem; overflow: hidden; }
+.detail-media img, .detail-media video { width: 100%; height: 100%; max-height: none; object-fit: contain; }
+.watermark-layer { display: none !important; }
+.watermark-badge { position: absolute; right: 1rem; bottom: 4.2rem; max-width: calc(100% - 2rem); padding: .56rem .78rem; border-radius: 999px; color: rgba(255,255,255,.94); background: rgba(5,8,22,.58); border: 1px solid rgba(255,255,255,.22); backdrop-filter: blur(10px); font-weight: 900; font-size: clamp(.72rem, 1vw, .88rem); letter-spacing: .01em; pointer-events: none; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 14px 34px rgba(0,0,0,.22); }
+@media (max-width: 960px) {
+  .detail-sidebar { position: static; }
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-media { height: min(70vh, 680px); }
+}
+@media (max-width: 640px) {
+  .detail-layout { gap: .75rem; margin-top: .5rem; }
+  .detail-main { padding: .55rem; border-radius: 1.35rem; }
+  .detail-sidebar { border-radius: 1.35rem; }
+  .detail-media-frame { border-radius: 1.05rem; }
+  .detail-media { height: auto; aspect-ratio: 4 / 5; max-height: 58vh; border-radius: 1.05rem; }
+  .detail-media img, .detail-media video { height: 100%; object-fit: contain; }
+  .detail-badges { left: .65rem; right: .65rem; bottom: .65rem; }
+  .detail-badges span { font-size: .74rem; padding: .44rem .6rem; }
+  .watermark-badge { right: .65rem; left: .65rem; bottom: 3.55rem; text-align: center; font-size: .72rem; padding: .46rem .62rem; }
+  .detail-author { align-items: flex-start; }
+  .detail-title { font-size: clamp(1.55rem, 8vw, 2.15rem); }
+}
+@media (max-width: 420px) {
+  .detail-media { max-height: 54vh; }
+}

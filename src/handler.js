@@ -19,6 +19,7 @@ import {
 } from './db.js';
 import { findReward, rewardListText } from './rewards.js';
 import { saveTestimonialMedia } from './storage.js';
+import { applyWatermarkToMedia } from './watermark.js';
 import {
   clampText,
   formatNumber,
@@ -282,14 +283,24 @@ async function testimonialCommand(ctx) {
   }
 
   const ext = downloadedMedia.extension || getMediaExtension(downloadedMedia.mimetype || media.mimetype, media.kind);
+  const processedMedia = await applyWatermarkToMedia({
+    buffer: downloaded,
+    mediaKind: media.kind,
+    mimetype: downloadedMedia.mimetype || media.mimetype,
+    extension: ext,
+    username: member.account.username,
+    text: testimonialText,
+    config: ctx.config
+  });
+
   let storedMedia;
   try {
     storedMedia = await saveTestimonialMedia({
-      buffer: downloaded,
+      buffer: processedMedia.buffer,
       username: member.account.username,
       mediaKind: media.kind,
-      mimetype: downloadedMedia.mimetype || media.mimetype,
-      extension: ext,
+      mimetype: processedMedia.mimetype || downloadedMedia.mimetype || media.mimetype,
+      extension: processedMedia.extension || ext,
       config: ctx.config
     });
   } catch (error) {
@@ -303,8 +314,10 @@ async function testimonialCommand(ctx) {
     mediaUrl: storedMedia.url,
     storageProvider: storedMedia.provider,
     storageKey: storedMedia.key,
-    mimetype: storedMedia.mimetype || downloadedMedia.mimetype || media.mimetype,
-    sizeBytes: storedMedia.sizeBytes || downloadedMedia.sizeBytes || downloaded.length
+    mimetype: storedMedia.mimetype || processedMedia.mimetype || downloadedMedia.mimetype || media.mimetype,
+    sizeBytes: storedMedia.sizeBytes || downloadedMedia.sizeBytes || processedMedia.buffer.length,
+    watermarked: processedMedia.watermarked,
+    watermarkMode: processedMedia.watermarkMode
   });
 
   if (!result.ok) {

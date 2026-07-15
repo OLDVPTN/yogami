@@ -58,6 +58,14 @@ export function loadConfig(file = './config.json') {
       publicBaseUrl: String(process.env.R2_PUBLIC_BASE_URL || config.r2?.publicBaseUrl || '').trim().replace(/\/$/, ''),
       uploadPrefix: String(process.env.R2_UPLOAD_PREFIX || config.r2?.uploadPrefix || 'testimonials').trim()
     },
+    watermark: {
+      mode: String(process.env.WATERMARK_MODE || config.watermark?.mode || 'both').trim().toLowerCase(),
+      text: String(process.env.WATERMARK_TEXT || config.watermark?.text || '').trim(),
+      embedImages: String(process.env.WATERMARK_EMBED_IMAGES ?? config.watermark?.embedImages ?? 'true').toLowerCase() !== 'false',
+      embedVideos: String(process.env.WATERMARK_EMBED_VIDEOS ?? config.watermark?.embedVideos ?? 'false').toLowerCase() === 'true',
+      position: String(process.env.WATERMARK_POSITION || config.watermark?.position || 'bottom-right').trim().toLowerCase(),
+      opacity: Number(process.env.WATERMARK_OPACITY || config.watermark?.opacity || 0.76)
+    },
     maxMediaMb: Number(config.maxMediaMb ?? 30),
     testimonialPointReward: Number(config.testimonialPointReward ?? 10),
     testimonialXpReward: Number(config.testimonialXpReward ?? 30),

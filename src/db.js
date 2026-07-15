@@ -137,6 +137,8 @@ function normalizeTestimonial(item = {}) {
     storageKey: item.storageKey || '',
     mimetype: item.mimetype || '',
     sizeBytes: Number(item.sizeBytes || 0),
+    watermarked: Boolean(item.watermarked),
+    watermarkMode: item.watermarkMode || '',
     views: normalizeTestimonialViews(item.views, item.viewCount),
     published: item.published !== false,
     createdAt: item.createdAt || Date.now(),
@@ -244,6 +246,8 @@ export function addTestimonial(db, member, payload = {}) {
     storageKey,
     mimetype: payload.mimetype || '',
     sizeBytes: payload.sizeBytes || 0,
+    watermarked: Boolean(payload.watermarked),
+    watermarkMode: payload.watermarkMode || '',
     published: true,
     createdAt: Date.now(),
     updatedAt: Date.now()

@@ -26,12 +26,10 @@
             >
           <% } %>
 
-          <div class="watermark-layer" aria-hidden="true">
-            <% const wmText = `@${testimonial.username} • #${(testimonial.keywords || ['testimoni'])[0] || 'testimoni'} • ${config.webTitle}`; %>
-            <% for (let i = 0; i < 12; i++) { %>
-              <span><%= wmText %></span>
-            <% } %>
-          </div>
+          <% const wmText = `@${testimonial.username} • #${(testimonial.keywords || ['testimoni'])[0] || 'testimoni'} • ${config.webTitle}`; %>
+          <% if (!testimonial.watermarked || testimonial.mediaType === 'video') { %>
+            <div class="watermark-badge" aria-hidden="true"><%= wmText %></div>
+          <% } %>
 
           <div class="detail-badges">
             <span><%= mediaKindLabel(testimonial) %></span>
@@ -71,7 +69,7 @@
         <a class="secondary-btn" href="/search?q=<%= encodeURIComponent((testimonial.keywords || [''])[0] || '') %>">Cari Hashtag</a>
       </div>
 
-      <p class="muted small-note">Watermark visual ditampilkan di halaman detail untuk mengurangi penyalahgunaan media. Proteksi ini membantu untuk pengguna umum, tetapi seperti semua media web, tidak bisa 100% anti-download untuk pengguna teknis.</p>
+      <p class="muted small-note">Gambar baru otomatis diberi watermark permanen sebelum masuk storage. Video tetap memakai watermark display, kecuali kamu mengaktifkan embedded video watermark lewat env.</p>
     </aside>
   </section>
 
