@@ -46,6 +46,37 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
     res.sendFile(path.join(ROOT_DIR, 'public/styles.css'));
   });
 
+  const liveDbReads = shouldUseLiveDbReads(config);
+  let lastDbRefreshAt = 0;
+  app.use(async (req, res, next) => {
+    if (isDynamicDataRequest(req)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+    }
+
+    if (!liveDbReads || typeof options.reloadDatabase !== 'function' || !shouldRefreshBeforeRequest(req)) {
+      next();
+      return;
+    }
+
+    const minMs = Math.max(0, Number(process.env.DB_LIVE_READ_MIN_MS || 1000));
+    const now = Date.now();
+    if (now - lastDbRefreshAt < minMs) {
+      next();
+      return;
+    }
+
+    try {
+      lastDbRefreshAt = now;
+      await options.reloadDatabase();
+    } catch (error) {
+      console.error('[database refresh error]', error.message);
+    }
+    next();
+  });
+
   const webhookPath = config.meta?.webhookPath || '/webhook';
 
   app.get(webhookPath, (req, res) => {
@@ -228,6 +259,35 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
   });
 
   return { app, server };
+}
+
+
+function shouldUseLiveDbReads(config = {}) {
+  const raw = String(process.env.DB_LIVE_READS || '').trim().toLowerCase();
+  if (['0', 'false', 'off', 'no'].includes(raw)) return false;
+  if (['1', 'true', 'on', 'yes'].includes(raw)) return true;
+  return String(config.database?.provider || config.dbProvider || '').toLowerCase() === 'neon';
+}
+
+function isDynamicDataRequest(req) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  const pathValue = String(req.path || '');
+  if (pathValue.startsWith('/assets/') || pathValue.startsWith('/media/')) return false;
+  return ['/', '/search', '/connect', '/health'].includes(pathValue)
+    || pathValue.startsWith('/@')
+    || pathValue.startsWith('/t/')
+    || pathValue.startsWith('/api/');
+}
+
+function shouldRefreshBeforeRequest(req) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  const pathValue = String(req.path || '');
+  if (pathValue.startsWith('/assets/') || pathValue.startsWith('/media/')) return false;
+  return pathValue === '/'
+    || pathValue === '/search'
+    || pathValue.startsWith('/@')
+    || pathValue.startsWith('/t/')
+    || pathValue.startsWith('/api/search');
 }
 
 function renderSearch(res, db, config, q) {

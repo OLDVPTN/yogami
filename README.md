@@ -415,3 +415,14 @@ Versi ini tidak lagi menyimpan semua data di satu baris `app_state`. Saat `DB_PR
 - `member_bot_meta` untuk metadata schema
 
 Kalau database lama masih punya data di `app_state`, aplikasi akan mencoba migrasi otomatis saat start pertama. Setelah migrasi, data aktif dibaca dan disimpan dari tabel relational. Tabel `app_state` tidak langsung dihapus agar tetap ada backup sementara.
+
+## Catatan database realtime
+
+Website membaca database ke memori saat aplikasi start. Pada versi ini sudah ditambahkan live read untuk Neon:
+
+```env
+DB_LIVE_READS=true
+DB_LIVE_READ_MIN_MS=1000
+```
+
+Dengan mode ini, halaman publik akan refresh data dari Neon sebelum render, sehingga penghapusan manual di Neon lebih cepat terlihat di website. Jika kamu menghapus data langsung dari Neon, sebaiknya pastikan tidak ada pending save dari aplikasi, atau restart service setelah penghapusan besar.

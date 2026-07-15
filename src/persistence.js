@@ -70,6 +70,33 @@ export async function saveDatabase(config = {}, db = DEFAULT_DB, file = './datab
   return { ok: true, provider: 'local' };
 }
 
+
+export async function refreshDatabase(config = {}, targetDb = DEFAULT_DB, file = './database/database.json') {
+  const settings = getDbSettings(config);
+  let fresh;
+
+  if (settings.provider === 'neon') {
+    if (!settings.databaseUrl) {
+      throw new Error('DATABASE_URL belum diisi. Database Neon tidak bisa direfresh.');
+    }
+
+    const client = getPool(settings);
+    await ensureSchema(client);
+
+    // Refresh runtime tidak membaca app_state legacy dan tidak melakukan seed dari file lokal.
+    // Ini penting supaya jika data relational dihapus manual dari Neon, data lama di memori
+    // tidak muncul lagi atau tidak ter-migrasi ulang dari app_state.
+    fresh = await readRelationalState(client, settings.stateKey) || structuredCloneSafe(DEFAULT_DB);
+  } else {
+    fresh = normalizeDb(readJson(file, DEFAULT_DB));
+  }
+
+  const normalized = normalizeDb(fresh);
+  for (const key of Object.keys(targetDb || {})) delete targetDb[key];
+  Object.assign(targetDb, normalized);
+  return targetDb;
+}
+
 export async function closeDatabase(config = {}) {
   clearTimeout(saveTimer);
   saveTimer = null;

@@ -4,7 +4,7 @@ import { handleIncoming } from './src/handler.js';
 import { ensureDir, loadConfig } from './src/utils.js';
 import { startWebServer } from './src/web.js';
 import { validateStorageSettings } from './src/storage.js';
-import { closeDatabase, loadDatabase, saveDatabase, validateDbSettings } from './src/persistence.js';
+import { closeDatabase, loadDatabase, refreshDatabase, saveDatabase, validateDbSettings } from './src/persistence.js';
 import {
   createMetaWhatsAppClient,
   extractWebhookMessages,
@@ -49,13 +49,24 @@ if (!metaStatus.ok) console.log(chalk.yellow(`[meta] ${metaStatus.warnings.join(
 const db = await loadDatabase(config, DB_FILE);
 const waClient = createMetaWhatsAppClient(config);
 let lastSave = Date.now();
+let databaseDirty = false;
 
 async function saveNow(options = {}) {
   await saveDatabase(config, db, DB_FILE, options);
+  databaseDirty = false;
   lastSave = Date.now();
 }
 
+async function reloadDatabaseFromSource() {
+  // Jangan refresh dari Neon saat ada perubahan lokal yang belum sempat tersimpan.
+  if (databaseDirty) return { skipped: true, reason: 'dirty_runtime' };
+  if (config.database.provider !== 'neon') return { skipped: true, reason: 'not_neon' };
+  await refreshDatabase(config, db, DB_FILE);
+  return { ok: true };
+}
+
 setInterval(() => {
+  if (!databaseDirty) return;
   saveNow().catch((error) => console.error(chalk.red('[database save error]'), error.message));
 }, 30_000);
 
@@ -89,8 +100,10 @@ async function processWebhookPayload(payload) {
     try {
       const changed = await handleIncoming(waClient, event, db, config);
       results.push({ id: event.id, from: event.from, changed });
+      if (changed) databaseDirty = true;
       if (changed || Date.now() - lastSave > 10_000) {
-        saveNow().catch((error) => console.error(chalk.red('[database save error]'), error.message));
+        saveNow({ immediate: Boolean(process.env.DB_SAVE_IMMEDIATE === 'true') })
+          .catch((error) => console.error(chalk.red('[database save error]'), error.message));
       }
     } catch (error) {
       console.error(chalk.red('[webhook message error]'), error);
@@ -118,7 +131,10 @@ const metaRuntime = {
 };
 
 startWebServer(db, config, metaRuntime, {
+  reloadDatabase: reloadDatabaseFromSource,
   onDatabaseChange: () => {
-    saveNow().catch((error) => console.error(chalk.red('[database save error]'), error.message));
+    databaseDirty = true;
+    saveNow({ immediate: Boolean(process.env.DB_SAVE_IMMEDIATE === 'true') })
+      .catch((error) => console.error(chalk.red('[database save error]'), error.message));
   }
 });
