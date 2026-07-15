@@ -60,11 +60,15 @@ export function loadConfig(file = './config.json') {
     },
     watermark: {
       mode: String(process.env.WATERMARK_MODE || config.watermark?.mode || 'both').trim().toLowerCase(),
+      layout: String(process.env.WATERMARK_LAYOUT || config.watermark?.layout || 'top-bottom').trim().toLowerCase(),
       text: String(process.env.WATERMARK_TEXT || config.watermark?.text || '').trim(),
+      topText: String(process.env.WATERMARK_TOP_TEXT || config.watermark?.topText || '').trim(),
+      bottomLeft: String(process.env.WATERMARK_BOTTOM_LEFT || config.watermark?.bottomLeft || '').trim(),
+      bottomRight: String(process.env.WATERMARK_BOTTOM_RIGHT || config.watermark?.bottomRight || '').trim(),
       embedImages: String(process.env.WATERMARK_EMBED_IMAGES ?? config.watermark?.embedImages ?? 'true').toLowerCase() !== 'false',
       embedVideos: String(process.env.WATERMARK_EMBED_VIDEOS ?? config.watermark?.embedVideos ?? 'false').toLowerCase() === 'true',
       position: String(process.env.WATERMARK_POSITION || config.watermark?.position || 'bottom-right').trim().toLowerCase(),
-      opacity: Number(process.env.WATERMARK_OPACITY || config.watermark?.opacity || 0.76)
+      opacity: Number(process.env.WATERMARK_OPACITY || config.watermark?.opacity || 0.72)
     },
     maxMediaMb: Number(config.maxMediaMb ?? 30),
     testimonialPointReward: Number(config.testimonialPointReward ?? 10),

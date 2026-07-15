@@ -26,9 +26,15 @@
             >
           <% } %>
 
-          <% const wmText = `@${testimonial.username} • #${(testimonial.keywords || ['testimoni'])[0] || 'testimoni'} • ${config.webTitle}`; %>
+          <% const wmHashtag = (testimonial.keywords || ['testimoni'])[0] || 'testimoni'; %>
+          <% const wmTop = `@${testimonial.username} • #${wmHashtag}`; %>
+          <% const wmBottomLeft = config.webTitle || 'Poko Testimoni'; %>
+          <% const wmBottomRight = formatDateTime(testimonial.createdAt, config.timezone); %>
           <% if (!testimonial.watermarked || testimonial.mediaType === 'video') { %>
-            <div class="watermark-badge" aria-hidden="true"><%= wmText %></div>
+            <div class="display-watermark" aria-hidden="true">
+              <div class="wm-topbar"><span><%= wmTop %></span></div>
+              <div class="wm-bottombar"><strong><%= wmBottomLeft %></strong><span><%= wmBottomRight %></span></div>
+            </div>
           <% } %>
 
           <div class="detail-badges">
@@ -69,7 +75,7 @@
         <a class="secondary-btn" href="/search?q=<%= encodeURIComponent((testimonial.keywords || [''])[0] || '') %>">Cari Hashtag</a>
       </div>
 
-      <p class="muted small-note">Gambar baru otomatis diberi watermark permanen sebelum masuk storage. Video tetap memakai watermark display, kecuali kamu mengaktifkan embedded video watermark lewat env.</p>
+      <p class="muted small-note">Gambar baru otomatis diberi watermark permanen model atas–bawah sebelum masuk storage. Video memakai watermark display atas–bawah, kecuali kamu mengaktifkan embedded video watermark lewat env.</p>
     </aside>
   </section>
 

@@ -375,19 +375,27 @@ Catatan penting: di web, media tidak bisa dibuat 100% anti-download. Kalau file 
 
 
 ## Watermark dan ukuran media
-Default baru:
+
+Default yang direkomendasikan sekarang adalah **clean top-bottom watermark**. Gambar baru diberi watermark permanen sebelum di-upload ke R2; video memakai watermark display atas-bawah di halaman detail.
 
 ```env
 WATERMARK_MODE=both
+WATERMARK_LAYOUT=top-bottom
 WATERMARK_EMBED_IMAGES=true
 WATERMARK_EMBED_VIDEOS=false
-WATERMARK_POSITION=bottom-right
-WATERMARK_OPACITY=0.76
+WATERMARK_OPACITY=0.72
+WATERMARK_TOP_TEXT={username} • {hashtag}
+WATERMARK_BOTTOM_LEFT={site}
+WATERMARK_BOTTOM_RIGHT={datetime}
 ```
 
-- Gambar baru diberi watermark permanen sebelum di-upload ke R2.
-- Video tetap memakai watermark display di halaman detail karena embedded video butuh re-encode FFmpeg.
-- Kalau server kuat dan kamu siap proses upload video lebih lama, aktifkan:
+Alasan layout ini dipilih:
+- lebih susah di-crop dibanding watermark pojok;
+- tetap rapi di mobile;
+- tidak terlalu menutupi isi media;
+- branding terlihat lebih resmi.
+
+Kalau server kuat dan kamu siap proses upload video lebih lama, aktifkan:
 
 ```env
 WATERMARK_EMBED_VIDEOS=true

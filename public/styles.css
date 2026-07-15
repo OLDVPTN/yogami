@@ -346,3 +346,37 @@ time { color: var(--muted); font-size: .82rem; white-space: nowrap; }
 @media (max-width: 420px) {
   .detail-media { max-height: 54vh; }
 }
+
+
+/* Clean top-bottom watermark layout */
+.detail-badges { display: none; }
+.display-watermark { position: absolute; inset: 0; pointer-events: none; z-index: 3; color: #fff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; user-select: none; }
+.wm-topbar, .wm-bottombar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  min-height: clamp(42px, 6.2vh, 74px);
+  padding-inline: clamp(.85rem, 2.5vw, 1.6rem);
+  background: linear-gradient(180deg, rgba(5,8,22,.76), rgba(5,8,22,.58));
+  text-shadow: 0 1px 2px rgba(0,0,0,.34);
+}
+.wm-topbar { top: 0; justify-content: flex-start; font-weight: 900; letter-spacing: .01em; }
+.wm-topbar span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-bottombar {
+  bottom: 0;
+  justify-content: space-between;
+  gap: .75rem;
+  min-height: clamp(50px, 7.2vh, 86px);
+  background: linear-gradient(0deg, rgba(5,8,22,.80), rgba(5,8,22,.58));
+}
+.wm-bottombar strong { font-size: clamp(1rem, 2vw, 1.55rem); font-weight: 950; letter-spacing: -.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wm-bottombar span { font-weight: 800; color: rgba(255,255,255,.84); white-space: nowrap; font-size: clamp(.78rem, 1.25vw, 1rem); }
+@media (max-width: 640px) {
+  .wm-topbar, .wm-bottombar { padding-inline: .75rem; }
+  .wm-topbar { min-height: 38px; font-size: .78rem; }
+  .wm-bottombar { min-height: 46px; }
+  .wm-bottombar strong { font-size: .96rem; max-width: 52%; }
+  .wm-bottombar span { font-size: .72rem; max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
+}
