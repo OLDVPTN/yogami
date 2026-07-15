@@ -4,7 +4,7 @@
 <main class="container">
   <section class="hero hero-home">
     <div class="hero-copy">
-      <p class="eyebrow">Poko Member Stories</p>
+      <p class="eyebrow">Member Stories</p>
       <h1>Cari testimoni asli dari member.</h1>
       <p class="lead">Temukan pengalaman member berdasarkan keyword. Buka profil pengguna, lihat gambar atau video testimoni, lalu bandingkan pengalaman yang paling relevan.</p>
       <%- include('../partials/search-form', { value: query }) %>
@@ -21,7 +21,7 @@
         <% if (trendingKeyword?.source === 'today-search') { %>
           <%= formatNumber(trendingKeyword.count || 0) %>x dicari hari ini
         <% } else { %>
-          Gambar · Video · Profil Member
+          Gambar · Video
         <% } %>
       </span>
     </div>
