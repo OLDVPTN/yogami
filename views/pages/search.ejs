@@ -1,0 +1,17 @@
+<%- include('../partials/head') %>
+<%- include('../partials/topbar') %>
+
+<main class="container">
+  <section class="hero small">
+    <p class="eyebrow">Pencarian</p>
+    <h1><%= query ? `Hasil untuk “${query}”` : 'Cari testimoni member' %></h1>
+    <p class="lead"><%= query ? `${formatNumber(results.length)} profil member ditemukan.` : 'Masukkan keyword untuk mencari testimoni.' %></p>
+    <%- include('../partials/search-form', { value: query }) %>
+  </section>
+
+  <% if (hasQuery) { %>
+    <%- include('../partials/user-results', { results, query }) %>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>

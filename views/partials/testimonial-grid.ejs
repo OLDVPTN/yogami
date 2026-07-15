@@ -1,0 +1,12 @@
+<% if (!testimonials || !testimonials.length) { %>
+  <section class="empty">
+    <h2>Belum ada testimoni.</h2>
+    <p>Testimoni yang dikirim lewat WhatsApp akan muncul di sini.</p>
+  </section>
+<% } else { %>
+  <section class="cards testimonials">
+    <% testimonials.forEach((item) => { %>
+      <%- include('testimonial-card', { item, config }) %>
+    <% }) %>
+  </section>
+<% } %>

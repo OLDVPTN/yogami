@@ -1,0 +1,37 @@
+{
+  "botName": "Poko Member Bot",
+  "ownerNumber": "6281234567890",
+  "prefix": ".",
+  "timezone": "Asia/Jakarta",
+  "autoRead": false,
+  "publicBaseUrl": "http://localhost:10000",
+  "webTitle": "Poko Testimoni Member",
+  "maxMediaMb": 30,
+  "testimonialPointReward": 10,
+  "testimonialXpReward": 30,
+  "xpPerMessage": 5,
+  "pointPerMessage": 1,
+  "messageCooldownSeconds": 60,
+  "dailyChatCap": 100,
+  "checkinReward": 50,
+  "checkinXp": 100,
+  "dailyChatQuestTarget": 10,
+  "dailyChatQuestPoint": 25,
+  "dailyChatQuestXp": 30,
+  "levelBaseXp": 120,
+  "meta": {
+    "graphApiVersion": "v25.0",
+    "webhookPath": "/webhook"
+  },
+  "storageProvider": "r2",
+  "r2": {
+    "bucket": "",
+    "publicBaseUrl": "",
+    "uploadPrefix": "testimonials"
+  },
+  "database": {
+    "provider": "local",
+    "stateKey": "main",
+    "saveDebounceMs": 1500
+  }
+}

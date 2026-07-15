@@ -1,0 +1,22 @@
+<%- include('../partials/head') %>
+<%- include('../partials/topbar') %>
+
+<main class="container">
+  <section class="hero">
+    <p class="eyebrow">Poko Member Stories</p>
+    <h1>Cari testimoni asli dari member.</h1>
+    <p class="lead">Ketik keyword seperti <strong>thalassemia</strong>, <strong>UMKM</strong>, <strong>produk</strong>, atau pengalaman lain. Hasil pencarian akan mengarah ke profil member yang punya testimoni relevan.</p>
+    <%- include('../partials/search-form', { value: query }) %>
+  </section>
+
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Terbaru</p>
+      <h2>Testimoni terbaru</h2>
+    </div>
+  </section>
+
+  <%- include('../partials/testimonial-grid', { testimonials: latest, config }) %>
+</main>
+
+<%- include('../partials/footer') %>

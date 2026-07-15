@@ -1,0 +1,42 @@
+<%- include('../partials/head', { title, description }) %>
+<body>
+  <%- include('../partials/topbar') %>
+
+  <main class="container narrow">
+    <section class="hero small-hero">
+      <p class="eyebrow">WhatsApp Official API</p>
+      <h1>Bot ini memakai Meta Cloud API</h1>
+      <p class="hero-text">
+        Tidak ada pairing code, QR, atau session WhatsApp Web. Koneksi dilakukan dari Meta Developer Dashboard melalui webhook.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Status</h2>
+      <div class="status-grid">
+        <div><span>Provider</span><strong><%= status?.provider || 'meta-cloud-api' %></strong></div>
+        <div><span>Graph API</span><strong><%= status?.graphApiVersion || '-' %></strong></div>
+        <div><span>Phone Number ID</span><strong><%= status?.phoneNumberId || '-' %></strong></div>
+        <div><span>Configured</span><strong><%= status?.configured ? 'Ya' : 'Belum lengkap' %></strong></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Webhook URL</h2>
+      <code class="block-code"><%= baseUrl %><%= status?.webhookPath || '/webhook' %></code>
+      <p class="muted">Masukkan URL ini di Meta App Dashboard pada bagian WhatsApp &gt; Configuration &gt; Webhook.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Environment yang wajib diisi</h2>
+      <pre class="block-code">WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_VERIFY_TOKEN=
+PUBLIC_BASE_URL=<%= baseUrl %></pre>
+      <p class="muted">Setelah webhook verified, subscribe field <strong>messages</strong> supaya pesan dari user masuk ke server ini.</p>
+    </section>
+  </main>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

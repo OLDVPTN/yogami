@@ -1,0 +1,33 @@
+{
+  "name": "poko-member-testimoni-meta-cloud-api",
+  "version": "2.0.0",
+  "description": "Bot WhatsApp gamifikasi member + website publik testimoni EJS memakai WhatsApp Cloud API resmi Meta, Cloudflare R2, dan Neon PostgreSQL.",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "dev": "node --watch main.js",
+    "check": "node --check main.js && node --check src/handler.js && node --check src/db.js && node --check src/persistence.js && node --check src/utils.js && node --check src/rewards.js && node --check src/web.js && node --check src/storage.js && node --check src/meta.js"
+  },
+  "keywords": [
+    "whatsapp-cloud-api",
+    "meta",
+    "webhook",
+    "gamification",
+    "member",
+    "testimoni"
+  ],
+  "author": "Poko Group",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.832.0",
+    "chalk": "^5.4.1",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "pg": "^8.13.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

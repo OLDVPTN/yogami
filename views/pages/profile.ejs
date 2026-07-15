@@ -1,0 +1,23 @@
+<%- include('../partials/head') %>
+<%- include('../partials/topbar') %>
+
+<main class="container">
+  <section class="profile-hero">
+    <div class="avatar"><%= (member.name || member.account.username).charAt(0).toUpperCase() %></div>
+    <div>
+      <p class="eyebrow">Profil Member</p>
+      <h1><%= member.name || member.account.username %></h1>
+      <p class="username">@<%= member.account.username %></p>
+      <div class="stats">
+        <span><%= formatNumber(testimonials.length) %> testimoni</span>
+        <span>Level <%= formatNumber(member.level || 1) %></span>
+        <span><%= formatNumber(member.points || 0) %> poin</span>
+      </div>
+    </div>
+  </section>
+
+  <%- include('../partials/search-form', { value: '', placeholder: 'Cari testimoni lain' }) %>
+  <%- include('../partials/testimonial-grid', { testimonials, config }) %>
+</main>
+
+<%- include('../partials/footer') %>
