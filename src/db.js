@@ -512,9 +512,26 @@ export function searchTestimonials(db, query = '', limit = 30) {
     .slice(0, limit);
 }
 
+function sortNewestTestimonials(items = []) {
+  return [...items].sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+}
+
 export function latestTestimonials(db, limit = 12) {
   normalizeDb(db);
-  return sortPublicTestimonials(db.testimonials.filter((item) => item.published)).slice(0, limit);
+  return sortNewestTestimonials(db.testimonials.filter((item) => item.published)).slice(0, limit);
+}
+
+export function verifiedTestimonials(db, limit = 12) {
+  normalizeDb(db);
+  return [...db.testimonials]
+    .filter((item) => item.published && item.verified)
+    .sort((a, b) => {
+      const aTime = Number(a.verifiedAt || a.createdAt || 0);
+      const bTime = Number(b.verifiedAt || b.createdAt || 0);
+      if (bTime !== aTime) return bTime - aTime;
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    })
+    .slice(0, limit);
 }
 
 export function resetDailyIfNeeded(member, config) {

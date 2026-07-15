@@ -9,13 +9,16 @@
     if (event.target.closest && event.target.closest('.no-save')) event.preventDefault();
   });
 
-  document.querySelectorAll('[data-load-more="home-testimonials"]').forEach(function (button) {
+  document.querySelectorAll('[data-load-more]').forEach(function (button) {
     button.addEventListener('click', function () {
+      var key = button.getAttribute('data-load-more');
       var step = Number(button.getAttribute('data-step') || 4);
-      var hidden = Array.from(document.querySelectorAll('.home-testimonial-grid .testimonial-card.home-hidden'));
+      var grid = document.querySelector('[data-load-grid="' + key + '"]');
+      if (!grid) return;
+      var hidden = Array.from(grid.querySelectorAll('.testimonial-card.home-hidden'));
       hidden.slice(0, step).forEach(function (card) { card.classList.remove('home-hidden'); });
-      if (document.querySelectorAll('.home-testimonial-grid .testimonial-card.home-hidden').length === 0) {
-        button.closest('.load-more-wrap').remove();
+      if (grid.querySelectorAll('.testimonial-card.home-hidden').length === 0) {
+        button.closest('.load-more-wrap')?.remove();
       }
     });
   });

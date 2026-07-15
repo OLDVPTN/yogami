@@ -15,7 +15,8 @@ import {
   recordSearchQuery,
   recordTestimonialView,
   searchTestimonials,
-  topSearchKeywordToday
+  topSearchKeywordToday,
+  verifiedTestimonials
 } from './db.js';
 import { readStoredMedia } from './storage.js';
 
@@ -124,6 +125,7 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
     if (q) return renderSearch(res, db, config, q);
 
     const latest = latestTestimonials(db, 24);
+    const verified = verifiedTestimonials(db, 12);
     const stats = buildPublicStats(db);
     const trendingKeyword = buildHeroKeyword(db, config, latest);
     res.render('pages/home', viewLocals(config, {
@@ -131,6 +133,7 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
       description: 'Cari testimoni member berdasarkan keyword, lalu buka profil pengguna untuk melihat semua testimoni mereka.',
       query: q,
       latest,
+      verified,
       stats,
       trendingKeyword
     }));
@@ -139,6 +142,20 @@ export function startWebServer(db, config, metaRuntime = null, options = {}) {
   app.get('/search', (req, res) => {
     const q = String(req.query.q || '').trim();
     renderSearch(res, db, config, q);
+  });
+
+
+  app.get('/latest', (req, res) => {
+    const testimonials = latestTestimonials(db, 120);
+    res.render('pages/latest', viewLocals(config, {
+      title: 'Testimoni Terbaru',
+      description: 'Postingan testimoni terbaru dari member.',
+      testimonials
+    }));
+  });
+
+  app.get('/testimoni-terbaru', (req, res) => {
+    res.redirect(301, '/latest');
   });
 
   app.get('/t/:id', (req, res) => {
@@ -279,7 +296,7 @@ function isDynamicDataRequest(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
   const pathValue = String(req.path || '');
   if (pathValue.startsWith('/assets/') || pathValue.startsWith('/media/')) return false;
-  return ['/', '/search', '/connect', '/health'].includes(pathValue)
+  return ['/', '/search', '/latest', '/testimoni-terbaru', '/connect', '/health'].includes(pathValue)
     || pathValue.startsWith('/@')
     || pathValue.startsWith('/t/')
     || pathValue.startsWith('/api/');
@@ -291,6 +308,8 @@ function shouldRefreshBeforeRequest(req) {
   if (pathValue.startsWith('/assets/') || pathValue.startsWith('/media/')) return false;
   return pathValue === '/'
     || pathValue === '/search'
+    || pathValue === '/latest'
+    || pathValue === '/testimoni-terbaru'
     || pathValue.startsWith('/@')
     || pathValue.startsWith('/t/')
     || pathValue.startsWith('/api/search');

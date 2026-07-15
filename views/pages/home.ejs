@@ -28,15 +28,27 @@
     </div>
   </section>
 
+  <% if (verified && verified.length) { %>
+    <section class="section-head">
+      <div>
+        <p class="eyebrow">Terverifikasi</p>
+        <h2>Testimoni terverifikasi</h2>
+      </div>
+      <span class="section-note">Dipilih dan dicek oleh tim</span>
+    </section>
+
+    <%- include('../partials/testimonial-grid', { testimonials: verified, config, homeLimit: 4, loadMoreKey: 'verified-testimonials' }) %>
+  <% } %>
+
   <section class="section-head">
     <div>
       <p class="eyebrow">Terbaru</p>
       <h2>Testimoni terbaru</h2>
     </div>
-    <a class="text-link" href="/search">Lihat semua</a>
+    <a class="text-link" href="/latest">Lihat semua</a>
   </section>
 
-  <%- include('../partials/testimonial-grid', { testimonials: latest, config, homeLimit: 4 }) %>
+  <%- include('../partials/testimonial-grid', { testimonials: latest, config, homeLimit: 4, loadMoreKey: 'latest-testimonials' }) %>
 </main>
 
 <%- include('../partials/footer') %>

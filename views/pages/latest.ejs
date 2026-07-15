@@ -1,0 +1,23 @@
+<%- include('../partials/head') %>
+<%- include('../partials/topbar') %>
+
+<main class="container">
+  <section class="hero small">
+    <p class="eyebrow">Postingan Terbaru</p>
+    <h1>Testimoni terbaru dari member.</h1>
+    <p class="lead">Halaman ini menampilkan testimoni berdasarkan waktu posting terbaru, bukan hasil pencarian.</p>
+    <%- include('../partials/search-form', { value: '', placeholder: 'Cari testimoni berdasarkan keyword' }) %>
+  </section>
+
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Timeline</p>
+      <h2>Baru dipost</h2>
+    </div>
+    <a class="text-link" href="/">Kembali ke home</a>
+  </section>
+
+  <%- include('../partials/testimonial-grid', { testimonials, config }) %>
+</main>
+
+<%- include('../partials/footer') %>

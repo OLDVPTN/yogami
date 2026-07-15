@@ -470,3 +470,10 @@ Contoh:
 ```txt
 .verifikasi TST-MABC123-XYZ999
 ```
+
+
+## Update Home & Testimoni Terbaru
+- Home memiliki section `Testimoni Terverifikasi` hanya jika ada testimoni yang sudah diverifikasi.
+- Section `Testimoni Terbaru` tetap menampilkan postingan terbaru dari member.
+- Tombol `Lihat semua` pada Testimoni Terbaru mengarah ke `/latest`, bukan `/search`.
+- `/latest` menampilkan timeline testimoni terbaru berdasarkan waktu posting.

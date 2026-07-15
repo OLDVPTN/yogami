@@ -1,17 +1,19 @@
+<% const hasLimit = typeof homeLimit !== 'undefined'; %>
+<% const groupKey = typeof loadMoreKey !== 'undefined' ? loadMoreKey : 'testimonials'; %>
 <% if (!testimonials || !testimonials.length) { %>
   <section class="empty glass-empty">
     <h2>Belum ada testimoni.</h2>
     <p>Testimoni yang dikirim lewat WhatsApp akan muncul di sini.</p>
   </section>
 <% } else { %>
-  <section class="cards testimonials <%= typeof homeLimit !== 'undefined' ? 'home-testimonial-grid' : '' %>">
+  <section class="cards testimonials <%= hasLimit ? 'home-testimonial-grid' : '' %>" <% if (hasLimit) { %>data-load-grid="<%= groupKey %>"<% } %>>
     <% testimonials.forEach((item, index) => { %>
-      <%- include('testimonial-card', { item, config, cardClass: (typeof homeLimit !== 'undefined' && index >= homeLimit) ? 'home-hidden' : '' }) %>
+      <%- include('testimonial-card', { item, config, cardClass: (hasLimit && index >= homeLimit) ? 'home-hidden' : '' }) %>
     <% }) %>
   </section>
-  <% if (typeof homeLimit !== 'undefined' && testimonials.length > homeLimit) { %>
+  <% if (hasLimit && testimonials.length > homeLimit) { %>
     <div class="load-more-wrap">
-      <button class="load-more-btn" type="button" data-load-more="home-testimonials" data-step="4">Load more</button>
+      <button class="load-more-btn" type="button" data-load-more="<%= groupKey %>" data-step="4">Load more</button>
     </div>
   <% } %>
 <% } %>
