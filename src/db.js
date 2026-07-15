@@ -119,7 +119,7 @@ function normalizeTestimonial(item = {}) {
     username: item.username,
     memberName: item.memberName || 'Member',
     text: item.text || '',
-    keywords: Array.isArray(item.keywords) ? item.keywords : extractKeywords(item.text || ''),
+    keywords: Array.isArray(item.keywords) && item.keywords.length ? item.keywords.slice(0, 1) : extractKeywords(item.text || ''),
     mediaType: item.mediaType || 'image',
     mediaUrl: item.mediaUrl,
     storageProvider: item.storageProvider || 'local',
@@ -223,7 +223,9 @@ export function addTestimonial(db, member, payload = {}) {
     username: member.account.username,
     memberName: member.name || member.account.username,
     text,
-    keywords: extractKeywords(`${text} ${payload.extraKeywords || ''}`),
+    // Hashtag/keyword publik hanya diambil dari judul/kata pertama testimoni.
+    // Search tetap membaca isi text penuh lewat searchTestimonials().
+    keywords: extractKeywords(text),
     mediaType: payload.mediaType || 'image',
     mediaUrl,
     storageProvider: payload.storageProvider || 'local',

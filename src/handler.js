@@ -262,14 +262,14 @@ async function testimonialCommand(ctx) {
   const media = getTestimonialMedia(ctx.rawMsg);
   if (!media) {
     await ctx.reply(
-      `Kirim *foto atau video* dengan caption:\n*${ctx.prefix}testimoni teks testimoni*\n\nBisa juga reply foto/video lalu ketik:\n*${ctx.prefix}testimoni teks testimoni*`
+      `Kirim *foto atau video* dengan caption:\n*${ctx.prefix}testimoni judul cerita testimoni*\n\nBisa juga reply foto/video lalu ketik:\n*${ctx.prefix}testimoni judul cerita testimoni*`
     );
     return false;
   }
 
   const testimonialText = ctx.text.trim();
   if (testimonialText.length < 5) {
-    await ctx.reply('Tulis testimoni minimal 5 karakter supaya bisa dicari orang. Contoh: *.testimoni pengalaman terapi thalassemia di sini sangat membantu*');
+    await ctx.reply('Tulis testimoni minimal 5 karakter. Kata pertama akan jadi hashtag. Contoh: *.testimoni thalassemia pelayanannya sangat membantu*');
     return false;
   }
 
@@ -318,7 +318,7 @@ async function testimonialCommand(ctx) {
   const xpResult = xpReward ? addXp(member, xpReward, ctx.config) : { levelUp: 0, currentLevel: member.level };
 
   await ctx.reply(
-    `✅ *Testimoni berhasil dipublish!*\n\nProfil: ${getProfileUrl(ctx.config, member.account.username)}\nID: *${result.testimonial.id}*\nStorage: *${storedMedia.provider.toUpperCase()}*\nKeyword otomatis: ${result.testimonial.keywords.length ? result.testimonial.keywords.map((key) => `#${key}`).join(' ') : '-'}\n\nReward: +${formatNumber(pointReward)} poin, +${formatNumber(xpReward)} XP${xpResult.levelUp ? `\n✨ Level up ke *Level ${xpResult.currentLevel}*!` : ''}`
+    `✅ *Testimoni berhasil dipublish!*\n\nProfil: ${getProfileUrl(ctx.config, member.account.username)}\nID: *${result.testimonial.id}*\nStorage: *${storedMedia.provider.toUpperCase()}*\nHashtag: ${result.testimonial.keywords.length ? result.testimonial.keywords.map((key) => `#${key}`).join(' ') : '-'}\n\nReward: +${formatNumber(pointReward)} poin, +${formatNumber(xpReward)} XP${xpResult.levelUp ? `\n✨ Level up ke *Level ${xpResult.currentLevel}*!` : ''}`
   );
   return true;
 }

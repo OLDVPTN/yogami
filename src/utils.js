@@ -244,18 +244,22 @@ export function normalizeSearchText(value = '') {
     .trim();
 }
 
-export function extractKeywords(text = '') {
-  const stopWords = new Set([
-    'yang', 'dan', 'atau', 'dengan', 'untuk', 'dari', 'dalam', 'ini', 'itu', 'aku', 'saya', 'kami', 'kita',
-    'testimoni', 'testimonial', 'pengalaman', 'banget', 'karena', 'jadi', 'kalau', 'kalo', 'sudah', 'udah',
-    'adalah', 'sebagai', 'pada', 'ke', 'di', 'the', 'a', 'an', 'of', 'to', 'for', 'is', 'are'
-  ]);
-
-  return [...new Set(normalizeSearchText(text)
+export function extractPrimaryHashtag(text = '') {
+  const words = normalizeSearchText(text)
     .split(' ')
     .map((word) => word.replace(/^#+/, '').trim())
-    .filter((word) => word.length >= 3 && !stopWords.has(word)))]
-    .slice(0, 20);
+    .filter(Boolean);
+
+  // Caption lama sering ditulis seperti: .testimoni testimoni thalassemia ...
+  // Supaya hashtag tidak menjadi #testimoni, lewati kata pembuka yang terlalu umum.
+  const ignoredOpeningWords = new Set(['testimoni', 'testimonial', 'pengalaman']);
+  const firstTitleWord = words.find((word) => word.length >= 2 && !ignoredOpeningWords.has(word));
+  return firstTitleWord || '';
+}
+
+export function extractKeywords(text = '') {
+  const primary = extractPrimaryHashtag(text);
+  return primary ? [primary] : [];
 }
 
 export function getMediaExtension(mimetype = '', mediaKind = '') {

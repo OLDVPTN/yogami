@@ -7,6 +7,7 @@ Fitur inti:
 - Member daftar akun lewat WhatsApp: `.akun username password`
 - Member kirim testimoni gambar/video lewat WhatsApp dengan caption `.testimoni ...`
 - Media testimoni disimpan ke Cloudflare R2
+- Hashtag testimoni hanya diambil dari kata/judul pertama setelah command, contoh `thalassemia` → `#thalassemia`
 - Data member, testimoni, poin, XP, voucher, dan redeem disimpan ke Neon PostgreSQL atau local fallback
 - Website publik EJS: `/`, `/search`, `/@username`
 - Webhook official Meta: `/webhook`
@@ -185,7 +186,7 @@ Buat akun testimoni:
 Kirim foto/video dengan caption:
 
 ```txt
-.testimoni testimoni thalassemia, pelayanannya membantu dan responsnya cepat
+.testimoni thalassemia pelayanannya membantu dan responsnya cepat
 ```
 
 Lihat link profil:
@@ -213,7 +214,7 @@ Member:
 ```txt
 .menu
 .akun username password
-.testimoni teks testimoni  # caption foto/video
+.testimoni judul cerita testimoni  # kata pertama jadi hashtag
 .link
 .daftar Nama Kamu
 .profil

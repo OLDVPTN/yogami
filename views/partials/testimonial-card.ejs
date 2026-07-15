@@ -10,7 +10,7 @@
     <a class="author" href="/@<%= item.username %>">@<%= item.username %></a>
     <p><%= item.text %></p>
     <div class="keywords">
-      <% (item.keywords || []).slice(0, 8).forEach((key) => { %>
+      <% (item.keywords || []).slice(0, 1).forEach((key) => { %>
         <a href="/search?q=<%= encodeURIComponent(key) %>">#<%= key %></a>
       <% }) %>
     </div>
